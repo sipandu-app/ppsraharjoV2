@@ -91,6 +91,7 @@
         const X = (props) => <Icon {...props} path={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />;
         const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>} />;
         const Lock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>} />;
+        const Unlock = (props) => <Icon {...props} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></>} />;
         const Edit3 = (props) => <Icon {...props} path={<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />} />;
         const Save = (props) => <Icon {...props} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>} />;
         const LogOut = (props) => <Icon {...props} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>} />;
@@ -118,6 +119,7 @@
             const [isEditing, setIsEditing] = useState(null);
 
             const [showStatusModal, setShowStatusModal] = useState(false);
+            const [pinModal, setPinModal] = useState({ show: false, type: '', dataId: null });
             const [pendingStatusUpdate, setPendingStatusUpdate] = useState(null);
             const [selectedFile, setSelectedFile] = useState(null);
             const fileInputRef = useRef(null);
@@ -133,6 +135,7 @@
             });
 
             const ADMIN_PIN = "000";
+            const LOCK_PIN = "000";
             const KATEGORI_OPTIONS = [
                 { value: 'SK', label: 'Surat Keputusan (SK)' },
                 { value: 'ST', label: 'Surat Tugas (ST)' },
@@ -155,11 +158,11 @@
             const fetchData = async () => {
                 setLoading(true);
                 try {
-                    // Fetch Surat Keluar
+                    // Fetch Surat Keluar ordered by tanggal
                     const { data: sData, error: sError } = await supabaseClient
                         .from('surat_keluar')
                         .select('*')
-                        .order('created_at', { ascending: false });
+                        .order('tanggal', { ascending: false });
 
                     if (sError) throw sError;
                     setSuratList(sData || []);
@@ -295,6 +298,7 @@
                     alert("Data berhasil disimpan!");
                     resetForm();
                     fetchData();
+                    setActiveTab('daftar');
                 } catch (error) {
                     alert("Gagal menyimpan: " + error.message);
                 } finally {
@@ -304,6 +308,11 @@
 
             const deleteSurat = async (id) => {
                 if (!isAdmin) return;
+                const item = suratList.find(s => s.id === id);
+                if (item && item.is_locked) {
+                    alert("Data terkunci! Silahkan buka kunci terlebih dahulu.");
+                    return;
+                }
                 if (window.confirm('Hapus data pengajuan ini secara permanen?')) {
                     setProcessLoading(true);
                     try {
@@ -319,6 +328,10 @@
             };
 
             const startEdit = (surat) => {
+                if (surat.is_locked) {
+                    alert("Data terkunci! Silahkan buka kunci terlebih dahulu.");
+                    return;
+                }
                 setIsEditing(surat.id);
                 setFormData({
                     nomorResmi: surat.nomor_resmi || '',
@@ -330,7 +343,41 @@
                     status: surat.status
                 });
                 setSelectedFile(surat.file_url ? { name: surat.file_name, url: surat.file_url } : null);
+                setActiveTab('input');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const handlePinSubmit = async (val) => {
+                if (val !== LOCK_PIN) {
+                    alert("PIN Salah!");
+                    return;
+                }
+
+                setProcessLoading(true);
+                try {
+                    const isLocking = pinModal.type === 'lock';
+                    const { error } = await supabaseClient
+                        .from('surat_keluar')
+                        .update({ is_locked: isLocking })
+                        .eq('id', pinModal.dataId);
+                    
+                    if (error) throw error;
+                    alert(isLocking ? "Data berhasil dikunci!" : "Kunci berhasil dibuka!");
+                    fetchData();
+                } catch (err) {
+                    alert("Gagal: " + err.message);
+                } finally {
+                    setProcessLoading(false);
+                    setPinModal({ show: false, type: '', dataId: null });
+                }
+            };
+
+            const handleToggleLock = (surat) => {
+                setPinModal({
+                    show: true,
+                    type: surat.is_locked ? 'unlock' : 'lock',
+                    dataId: surat.id
+                });
             };
 
             const handleExportXlsx = () => {
@@ -402,6 +449,31 @@
                         <button onClick={() => setActiveTab('input')} className={`px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === 'input' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Input Pengajuan</button>
                         <button onClick={() => setActiveTab('daftar')} className={`px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === 'daftar' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Daftar Pengajuan</button>
                     </div>
+
+                    {pinModal.show && (
+                        <div className="fixed inset-0 z-[300] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
+                            <div className="bg-white rounded-[3rem] p-12 w-full max-w-sm text-center space-y-8 shadow-2xl animate-in">
+                                <div className="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl">
+                                    <Lock size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="font-black uppercase text-base tracking-tight text-slate-900">Otentikasi PIN</h3>
+                                    <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Masukkan PIN Kunci Data</p>
+                                </div>
+                                <input 
+                                    type="password" 
+                                    autoFocus 
+                                    maxLength={3} 
+                                    className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-600 outline-none p-5 rounded-3xl text-5xl font-black text-center tracking-[1.5rem] shadow-inner"
+                                    placeholder="···"
+                                    onChange={e => {
+                                        if (e.target.value.length === 3) handlePinSubmit(e.target.value);
+                                    }}
+                                />
+                                <button onClick={() => setPinModal({ show: false, type: '', dataId: null })} className="text-[10px] font-black text-rose-500 uppercase hover:underline tracking-widest">Batal</button>
+                            </div>
+                        </div>
+                    )}
 
                     {activeTab === 'input' && (
                         <div className={`bg-white rounded-3xl shadow-xl border p-8 mb-8 max-w-5xl mx-auto animate-in ${isEditing ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'}`}>
@@ -492,7 +564,7 @@
                     )}
 
                     {activeTab === 'daftar' && (
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden max-w-[70%] mx-auto animate-in">
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden max-w-[95%] mx-auto animate-in">
                             <div className="p-6 border-b flex flex-col md:flex-row justify-between items-center gap-4">
                                 <h3 className="font-bold flex items-center gap-2 text-slate-800"><ShieldCheck className="w-4 h-4 text-blue-600" /> Daftar Pengajuan Surat Keluar</h3>
                                 <div className="flex gap-2 w-full md:w-auto">
@@ -525,9 +597,29 @@
                                                     <td className="px-6 py-5 text-center"><span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${surat.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : surat.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse' : 'bg-red-50 text-red-600 border-red-100'}`}>{surat.status}</span></td>
                                                     <td className="px-6 py-5 text-center">
                                                         <div className="flex justify-center gap-2">
-                                                            {surat.file_url && <a href={surat.file_url} target="_blank" className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Download className="w-4 h-4" /></a>}
-                                                            {(isAdmin || surat.status === 'pending') && <button onClick={() => startEdit(surat)} className="p-2 bg-amber-50 text-amber-600 rounded-xl"><Edit3 className="w-4 h-4" /></button>}
-                                                            {isAdmin && <button onClick={() => deleteSurat(surat.id)} className="p-2 bg-red-50 text-red-600 rounded-xl"><Trash2 className="w-4 h-4" /></button>}
+                                                            {surat.file_url && (
+                                                                <a href={surat.file_url} target="_blank" className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all" title={surat.file_name || "Lihat File"}>
+                                                                    <Download className="w-4 h-4" />
+                                                                </a>
+                                                            )}
+                                                            {isAdmin && (
+                                                                <>
+                                                                    <button onClick={() => startEdit(surat)} className={`p-2 rounded-xl transition-all ${surat.is_locked ? 'text-slate-200 bg-slate-50 cursor-not-allowed' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`} title="Edit Data">
+                                                                        <Edit3 className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button onClick={() => deleteSurat(surat.id)} className={`p-2 rounded-xl transition-all ${surat.is_locked ? 'text-slate-200 bg-slate-50 cursor-not-allowed' : 'bg-red-50 text-red-600 hover:bg-red-100'}`} title="Hapus Data">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button onClick={() => handleToggleLock(surat)} className={`p-2 rounded-xl transition-all ${surat.is_locked ? 'bg-blue-600 text-white shadow-inner' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`} title={surat.is_locked ? "Buka Kunci" : "Kunci Data"}>
+                                                                        {surat.is_locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {!isAdmin && surat.status === 'pending' && !surat.is_locked && (
+                                                                <button onClick={() => startEdit(surat)} className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all" title="Edit Pengajuan">
+                                                                    <Edit3 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>

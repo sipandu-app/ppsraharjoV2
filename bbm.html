@@ -44,6 +44,7 @@
 
         const COLLECTION_VOUCHERS = 'voucher_data';
         const COLLECTION_QUOTAS = 'unit_quotas_logs'; 
+        const COLLECTION_PEGAWAI = 'data_pegawai';
         const MASTER_PIN = '888';
         const LOCK_PIN = '000';
 
@@ -141,6 +142,7 @@
             
             const [vouchers, setVouchers] = useState([]);
             const [quotaLogs, setQuotaLogs] = useState([]);
+            const [pegawaiList, setPegawaiList] = useState([]);
             const [editId, setEditId] = useState(null);
             const [editQuotaId, setEditQuotaId] = useState(null);
             
@@ -171,6 +173,16 @@
             const unitOptions = ["Tata Usaha", "Resos Disabilitas", "Resos Lanjut Usia", "Resos Anak", "Resos PMKS"];
             const nilaiVoucherOptions = [25000, 50000, 100000];
             const bbmOptions = Object.keys(HARGA_BBM_REF);
+
+            const savedSPBUs = useMemo(() => {
+                const spbus = vouchers.map(v => v.usage_details?.spbu).filter(Boolean);
+                return [...new Set(spbus)].sort();
+            }, [vouchers]);
+
+            const savedPlatNomor = useMemo(() => {
+                const plats = vouchers.map(v => v.usage_details?.noKendaraan).filter(Boolean);
+                return [...new Set(plats)].sort();
+            }, [vouchers]);
 
             const [form, setForm] = useState({
                 unitPengguna: '', 
@@ -205,6 +217,9 @@
                     const { data: qData, error: qError } = await supabaseClient.from(COLLECTION_QUOTAS).select('*').order('created_at', { ascending: false });
                     if (qError) throw qError;
                     setQuotaLogs(qData || []);
+
+                    const { data: pData, error: pError } = await supabaseClient.from(COLLECTION_PEGAWAI).select('nama');
+                    if (!pError) setPegawaiList(pData || []);
                 } catch (err) {
                     console.error(err);
                     showNotif("Gagal sinkron database", "error");
@@ -262,10 +277,27 @@
                     const searchStr = `${p} ${u} ${un} ${n}`.toLowerCase();
                     const matchSearch = searchStr.includes(term);
                     const matchUnit = filterUnit === 'Semua' || v.unit_pengguna === filterUnit;
-                    const vDate = v.tanggal?.split('T')[0] || '';
-                    const matchStart = !startDate || vDate >= startDate;
-                    const matchEnd = !endDate || vDate <= endDate;
-                    return matchSearch && matchUnit && matchStart && matchEnd;
+                    
+                    let matchMonth = true;
+                    if (v.tanggal && (startDate || endDate)) {
+                        const parts = v.tanggal.split('-');
+                        const vY = parseInt(parts[0]);
+                        const vM = parseInt(parts[1]);
+                        const monthVal = vY * 12 + (vM - 1);
+                        
+                        if (startDate) {
+                            const [sY, sM] = startDate.split('-').map(Number);
+                            const sVal = sY * 12 + (sM - 1);
+                            if (monthVal < sVal) matchMonth = false;
+                        }
+                        if (endDate) {
+                            const [eY, eM] = endDate.split('-').map(Number);
+                            const eVal = eY * 12 + (eM - 1);
+                            if (monthVal > eVal) matchMonth = false;
+                        }
+                    }
+                    
+                    return matchSearch && matchUnit && matchMonth;
                 });
             }, [vouchers, searchTerm, filterUnit, startDate, endDate]);
 
@@ -557,16 +589,22 @@
                     {detailModal.show && (
                         <div className="fixed inset-0 z-[500] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
                             <div className="bg-white rounded-[3rem] w-full max-w-xl p-10 shadow-2xl border border-white animate-in">
-                                <div className="flex justify-between items-center mb-8"><div><h3 className="text-xl font-black uppercase tracking-tighter">Input Struk BBM</h3><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Realisasi Voucher Unit: {detailModal.voucher.unit_pengguna}</p></div><button onClick={()=>setDetailModal({show:false})} className="p-3 bg-slate-100 rounded-full hover:bg-slate-200 transition-all"><X size={20}/></button></div>
-                                <form onSubmit={handleSaveUsageDetail} className="space-y-5">
-                                    <div className="grid grid-cols-2 gap-5">
-                                        <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400">Waktu Di Struk</label><input type="datetime-local" value={detailForm.waktuRealisasi} onChange={e=>setDetailForm({...detailForm, waktuRealisasi: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" required /></div>
-                                        <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400">Nama SPBU / Lokasi</label><input value={detailForm.spbu} onChange={e=>setDetailForm({...detailForm, spbu: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" placeholder="SPBU..." required /></div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-5">
-                                        <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400">No Struk</label><input value={detailForm.noStruk} onChange={e=>setDetailForm({...detailForm, noStruk: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" required /></div>
-                                        <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400">No Kendaraan</label><input value={detailForm.noKendaraan} onChange={e=>setDetailForm({...detailForm, noKendaraan: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" required /></div>
-                                    </div>
+                                    <div className="flex justify-between items-center mb-8"><div><h3 className="text-xl font-black uppercase tracking-tighter">Input Struk BBM</h3><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Realisasi Voucher Unit: {detailModal.voucher.unit_pengguna}</p></div><button onClick={()=>setDetailModal({show:false})} className="p-3 bg-slate-100 rounded-full hover:bg-slate-200 transition-all"><X size={20}/></button></div>
+                                    <form onSubmit={handleSaveUsageDetail} className="space-y-5">
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400">Waktu Di Struk</label><input type="datetime-local" value={detailForm.waktuRealisasi} onChange={e=>setDetailForm({...detailForm, waktuRealisasi: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" required /></div>
+                                            <div className="space-y-1 relative">
+                                                <label className="text-[9px] font-black uppercase text-slate-400">Nama SPBU / Lokasi</label>
+                                                <input list="list-spbu" value={detailForm.spbu} onChange={e=>setDetailForm({...detailForm, spbu: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" placeholder="SPBU..." required />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400">No Struk</label><input value={detailForm.noStruk} onChange={e=>setDetailForm({...detailForm, noStruk: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" required /></div>
+                                            <div className="space-y-1 relative">
+                                                <label className="text-[9px] font-black uppercase text-slate-400">No Kendaraan</label>
+                                                <input list="list-nopol" value={detailForm.noKendaraan} onChange={e=>setDetailForm({...detailForm, noKendaraan: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none" placeholder="PLAT NOMOR..." required />
+                                            </div>
+                                        </div>
                                     <div className="grid grid-cols-2 gap-5">
                                         <div className="space-y-1"><label className="text-[9px] font-black uppercase text-slate-400">Jenis BBM</label><select value={detailForm.jenisBbm} onChange={e=>{
                                             const jenis = e.target.value;
@@ -652,10 +690,13 @@
                                     <form onSubmit={handleSubmitVoucher} className="space-y-6">
                                         <div className="grid grid-cols-2 gap-6">
                                             <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400">Unit</label><select value={form.unitPengguna} onChange={e=>setForm({...form, unitPengguna: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black text-[11px] outline-none" required><option value="">Pilih Unit</option>{unitOptions.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
-                                            <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400">Waktu</label><input type="datetime-local" value={form.tanggal} onChange={e=>setForm({...form, tanggal: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black text-[11px] outline-none" required /></div>
-                                        </div>
-                                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400">Penerima</label><input value={form.penerima} onChange={e=>setForm({...form, penerima: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black text-[11px] uppercase outline-none" placeholder="NAMA PENERIMA..." required /></div>
-                                        <div className="grid grid-cols-3 gap-6 items-end">
+                                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400">Waktu</label><input type="datetime-local" value={form.tanggal} onChange={e=>setForm({...form, tanggal: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black text-[11px] outline-none" required /></div>
+                                    </div>
+                                    <div className="space-y-2 relative">
+                                        <label className="text-[10px] font-black uppercase text-slate-400">Penerima</label>
+                                        <input list="list-pegawai" value={form.penerima} onChange={e=>setForm({...form, penerima: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 rounded-2xl font-black text-[11px] uppercase outline-none" placeholder="NAMA PENERIMA..." required />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-6 items-end">
                                             <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400">Nominal</label><select value={form.nilaiVoucher} onChange={e=>setForm({...form, nilaiVoucher: e.target.value})} className="w-full p-4 bg-blue-50/50 text-blue-700 rounded-2xl font-black text-[11px] outline-none">{nilaiVoucherOptions.map(v=><option key={v} value={v}>Rp {formatToRupiah(v)}</option>)}</select></div>
                                             <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400">Jml Lembar</label><input type="number" value={form.volume} onChange={e=>setForm({...form, volume: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black text-[11px] outline-none" placeholder="0" required /></div>
                                             <div className="p-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] text-center">Rp {formatToRupiah((parseInt(form.nilaiVoucher) || 0) * (parseInt(form.volume) || 0))}</div>
@@ -680,6 +721,12 @@
                                         <select value={filterUnit} onChange={e=>{setFilterUnit(e.target.value); setCurrentPage(1);}} className="bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 font-black text-[9px] outline-none">
                                             <option value="Semua">SEMUA UNIT</option>{unitOptions.map(u=><option key={u} value={u}>{u}</option>)}
                                         </select>
+                                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                                            <span className="text-[7px] font-black text-slate-400 uppercase">Dari</span>
+                                            <input type="month" value={startDate} onChange={e=>{setStartDate(e.target.value); setCurrentPage(1);}} className="bg-transparent font-black text-[9px] outline-none w-24" />
+                                            <span className="text-[7px] font-black text-slate-400 uppercase">Sampai</span>
+                                            <input type="month" value={endDate} onChange={e=>{setEndDate(e.target.value); setCurrentPage(1);}} className="bg-transparent font-black text-[9px] outline-none w-24" />
+                                        </div>
                                         <button onClick={fetchData} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg hover:text-blue-500 transition-all"><RotateCcw size={12}/></button>
                                         <button onClick={exportToExcel} className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-black uppercase text-[8px] flex items-center gap-2 shadow-sm"><FileSpreadsheet size={14}/> EXPORT</button>
                                     </div>
@@ -759,6 +806,17 @@
                         )}
                     </main>
                     <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t py-2 px-6 flex justify-between items-center z-30"><div className="flex items-center gap-4"><div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500"></div> <span className="text-[8px] font-black text-slate-400 uppercase">Sistem Aktif</span></div></div></footer>
+
+                    {/* Data Lists for Suggestions */}
+                    <datalist id="list-pegawai">
+                        {pegawaiList.map((p, idx) => <option key={`peg-${idx}`} value={p.nama} />)}
+                    </datalist>
+                    <datalist id="list-spbu">
+                        {savedSPBUs.map((s, idx) => <option key={`spbu-${idx}`} value={s} />)}
+                    </datalist>
+                    <datalist id="list-nopol">
+                        {savedPlatNomor.map((p, idx) => <option key={`nopol-${idx}`} value={p} />)}
+                    </datalist>
                 </div>
             );
         }

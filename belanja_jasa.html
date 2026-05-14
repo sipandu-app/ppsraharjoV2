@@ -102,7 +102,7 @@
                     <form id="form-jasa" class="space-y-6">
                         <input type="hidden" id="edit-id">
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Unit Pelayanan</label>
                                 <select id="unit_pelayanan" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" required>
@@ -112,6 +112,10 @@
                                     <option value="RPSA Pamardi Siwi Sragen">RPSA Pamardi Siwi Sragen</option>
                                     <option value="RPS PMKS Gondang Sragen">RPS PMKS Gondang Sragen</option>
                                 </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Nomor BP</label>
+                                <input type="text" id="nomor_bp" class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:border-emerald-500" placeholder="BP-001">
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Jenis Jasa</label>
@@ -221,6 +225,7 @@
                         <thead>
                             <tr class="bg-slate-50 border-b text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                 <th class="px-3 py-4 text-center">Tgl Kerja</th>
+                                <th class="px-3 py-4">Nomor BP</th>
                                 <th class="px-3 py-4">Pekerjaan</th>
                                 <th class="px-3 py-4">Penyedia</th>
                                 <th class="px-3 py-4">Unit</th>
@@ -342,6 +347,7 @@
                 
                 row.innerHTML = `
                     <td class="px-3 py-4 text-center font-bold text-slate-500 whitespace-nowrap">${item.tanggal_pekerjaan.split('-').reverse().join('/')}</td>
+                    <td class="px-3 py-4 text-[10px] font-black text-slate-700">${item.nomor_bp || '-'}</td>
                     <td class="px-3 py-4">
                         <div class="flex flex-col">
                             <span class="text-[9px] font-black text-slate-900 leading-tight uppercase flex items-center gap-1">
@@ -576,6 +582,7 @@
             unitSelect.value = item.unit_pelayanan || "";
             jenisSelect.value = item.jenis_jasa || "";
             
+            document.getElementById('nomor_bp').value = item.nomor_bp || "";
             document.getElementById('nama_pekerjaan').value = item.nama_pekerjaan || "";
             document.getElementById('tanggal_pekerjaan').value = item.tanggal_pekerjaan || "";
             document.getElementById('nama_rekanan').value = item.nama_rekanan || "";
@@ -650,6 +657,7 @@
                 const payload = {
                     unit_pelayanan: document.getElementById('unit_pelayanan').value,
                     jenis_jasa: document.getElementById('jenis_jasa').value,
+                    nomor_bp: document.getElementById('nomor_bp').value,
                     nama_pekerjaan: document.getElementById('nama_pekerjaan').value,
                     tanggal_pekerjaan: document.getElementById('tanggal_pekerjaan').value,
                     nama_rekanan: document.getElementById('nama_rekanan').value,
@@ -753,7 +761,8 @@
                             <p>${report.unit_pelayanan.toUpperCase()}</p>
                         </div>
                         <table class="meta-table">
-                            <tr><td class="label">Pekerjaan</td><td style="width:15px">:</td><td><strong>${report.nama_pekerjaan}</strong></td></tr>
+                            <tr><td class="label">Nomor BP</td><td style="width:15px">:</td><td><strong>${report.nomor_bp || '-'}</strong></td></tr>
+                            <tr><td class="label">Pekerjaan</td><td>:</td><td><strong>${report.nama_pekerjaan}</strong></td></tr>
                             <tr><td class="label">Jenis Jasa</td><td>:</td><td>${report.jenis_jasa}</td></tr>
                             <tr><td class="label">Rekanan/Penyedia</td><td>:</td><td>${report.nama_rekanan || '-'}</td></tr>
                             <tr><td class="label">Pelaksanaan</td><td>:</td><td>${report.tanggal_pekerjaan.split('-').reverse().join('/')}</td></tr>
@@ -879,6 +888,7 @@
                     const chunk = validData.slice(i, i + 10).map(v => ({
                         unit_pelayanan: v.unit_pelayanan || v.unitPelayanan || 'PPSDI Raharjo Sragen',
                         jenis_jasa: v.jenis_jasa || v.jenisJasa || 'Jasa Lainnya',
+                        nomor_bp: v.nomor_bp || v.no_bp || v.nomorBp || '',
                         nama_pekerjaan: v.nama_pekerjaan || v.namaPemeliharaan || v.nama_barang || v.nama || v.keterangan || 'Data Restored',
                         tanggal_pekerjaan: v.tanggal_pekerjaan || v.tanggalPekerjaan || v.tanggal || new Date().toISOString().split('T')[0],
                         nama_rekanan: v.nama_rekanan || v.namaRekanan || '',

@@ -576,6 +576,21 @@ function showPage(pageId) {
                 <iframe src="./restore_json.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
+        'setting-akses': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./setting_akses.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
+        'ganti-password': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./ganti_password.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
+        'cetak-kartu': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./cetak_kartu.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
         'statistik-pengunjung': `
             <div class="space-y-6">
                 <!-- Summary Stats -->
@@ -703,136 +718,236 @@ function clearVisitorStats() {
     }
 }
 
-let currentUserRole = null; // Menyimpan peran pengguna yang sedang login
+// Global state
+let currentUserRole = null;
+let currentUserAccess = [];
 
-const userRoles = {
-    'PPS2026': { // Approver
-        role: 'Approver',
-        allowedMenus: ['dashboard', 'sub-tu', 'sub-pm', 'sub-belanja', 'sub-laporan', 'sub-approver', 'sub-operasional'], // Semua Menu
-        excludedSubMenus: {}, // Tidak ada pengecualian
-        lockedMenus: []
-    },
-    'TU2026': { // Administrator-TU
-        role: 'Administrator-TU',
-        allowedMenus: ['dashboard', 'sub-tu', 'sub-pm', 'sub-belanja', 'sub-laporan', 'sub-approver', 'sub-operasional'],
-        excludedSubMenus: {},
-        lockedMenus: ['sub-approver']
-    },
-    'TEST2026': { // Administrator
-        role: 'Administrator',
-        allowedMenus: ['dashboard', 'sub-tu', 'sub-pm', 'sub-belanja', 'sub-laporan', 'sub-approver', 'sub-operasional'],
-        excludedSubMenus: {},
-        lockedMenus: ['sub-approver', 'sub-operasional']
-    },
-    'sragenasri': { // User
-        role: 'User',
-        allowedMenus: ['dashboard', 'sub-tu', 'sub-pm', 'sub-laporan', 'sub-belanja', 'sub-operasional', 'sub-approver'],
-        excludedSubMenus: {},
-        lockedMenus: ['sub-belanja', 'sub-operasional', 'sub-approver']
-    },
-    '8888': { // Checker
-        role: 'Checker',
-        allowedMenus: ['dashboard', 'sub-tu', 'sub-pm', 'sub-belanja', 'sub-laporan', 'sub-approver', 'sub-operasional'], // Semua Menu
-        excludedSubMenus: {}, // Tidak ada pengecualian
-        lockedMenus: ['sub-approver']
-    }
-};
+// Fungsi untuk menerapkan izin berdasarkan data dari database (Kolom 'access' yang dicentang)
+function applyMenuPermissionsByData(userData) {
+    currentUserRole = userData ? userData.role : 'Guest';
+    currentUserAccess = userData ? (userData.access || []) : [];
 
-function applyMenuPermissions(role) {
-    const roleConfig = userRoles[role];
-    if (!roleConfig) return;
-
-    // Reset semua link submenu ke keadaan aktif dan sembunyikan semua ikon kunci
-    document.querySelectorAll('.submenu-container a').forEach(link => {
-        link.classList.remove('text-slate-500', 'cursor-not-allowed', 'disabled-link');
-    });
-    document.querySelectorAll('.lock-icon').forEach(icon => {
-        icon.classList.add('hidden');
-    });
-
-    // Reset semua button menu utama (hapus lock icon lama jika ada)
-    document.querySelectorAll('nav button[id^="btn-sub-"]').forEach(btn => {
-        btn.classList.remove('cursor-not-allowed', 'opacity-80');
-        btn.style.pointerEvents = 'auto';
-        const lockIcon = btn.querySelector('.main-lock-icon');
+    // 1. Reset SEMUA menu: Pastikan semuanya TAMPIL (tidak hidden) dan AKTIF terlebih dahulu
+    document.querySelectorAll('#sidebar nav button, #sidebar nav div, .submenu-container button').forEach(item => {
+        item.classList.remove('hidden', 'menu-disabled');
+        item.style.pointerEvents = 'auto';
+        
+        // Hapus ikon kunci lama jika ada
+        const lockIcon = item.querySelector('.lock-icon-db');
         if (lockIcon) lockIcon.remove();
-        const chevron = btn.querySelector('.chevron-icon');
-        if (chevron) chevron.classList.remove('hidden');
     });
 
-    // Sembunyikan semua menu dan submenu terlebih dahulu
-    document.getElementById('menu-dashboard').classList.add('hidden');
-    document.getElementById('btn-sub-tu').classList.add('hidden');
-    document.getElementById('btn-sub-pm').classList.add('hidden');
-    document.getElementById('btn-sub-belanja').classList.add('hidden');
-    document.getElementById('btn-sub-laporan').classList.add('hidden');
-    document.getElementById('btn-sub-approver').classList.add('hidden');
-    document.getElementById('btn-sub-operasional').classList.add('hidden');
-    document.querySelectorAll('.submenu-container').forEach(sub => {
-        sub.classList.add('hidden');
+    // 2. Tampilkan semua container submenu agar isinya terlihat
+    document.querySelectorAll('.submenu-container').forEach(container => {
+        container.classList.remove('hidden');
     });
 
-    // Tampilkan menu yang diizinkan
-    roleConfig.allowedMenus.forEach(menuId => {
-        if (menuId === 'dashboard') {
-            document.getElementById('menu-dashboard').classList.remove('hidden');
-        } else {
-            const menuButton = document.getElementById(`btn-${menuId}`);
-            if (menuButton) {
-                menuButton.classList.remove('hidden');
-                const submenu = document.getElementById(menuId);
-                if (submenu) submenu.classList.remove('hidden');
-            }
+    // 3. Iterasi SEMUA tombol menu yang memiliki ID 'menu-xxx'
+    const allMenuButtons = document.querySelectorAll('button[id^="menu-"]');
+    allMenuButtons.forEach(btn => {
+        let pageId = btn.id.replace('menu-', '');
+        
+        // Normalisasi ID (Menghilangkan suffix jika ada)
+        if (pageId.includes('restore-json')) pageId = 'restore-json';
+        
+        // Pengecualian: Ganti Password dan Dashboard selalu aktif
+        if (pageId === 'ganti-password' || pageId === 'dashboard') return;
+
+        // Jika ID halaman TIDAK ada dalam daftar 'access' di database (tidak dicentang)
+        // Atau jika user belum login (Guest)
+        if (currentUserRole === 'Guest' || !currentUserAccess.includes(pageId)) {
+            // Maka DISABLE menu tersebut (tetap tampil tapi tidak bisa diklik)
+            btn.classList.add('menu-disabled');
+            btn.style.pointerEvents = 'none';
+
+            // Tambahkan ikon gembok kecil sebagai penanda visual
+            const lockIcon = document.createElement('i');
+            lockIcon.setAttribute('data-lucide', 'lock');
+            lockIcon.className = 'w-3 h-3 text-white/40 ml-auto lock-icon-db';
+            btn.appendChild(lockIcon);
         }
     });
 
-    // Kunci menu utama yang ditentukan
-    if (roleConfig.lockedMenus) {
-        roleConfig.lockedMenus.forEach(menuId => {
-            const btn = document.getElementById(`btn-${menuId}`);
-            if (btn) {
-                btn.classList.add('cursor-not-allowed', 'opacity-80');
-                btn.style.pointerEvents = 'none'; // Nonaktifkan klik
+    // 4. KUNCI RUANG APPROVER UNTUK SEMUA ROLE (Permintaan User)
+    const approverContainer = document.getElementById('sub-approver');
+    const approverBtn = document.getElementById('btn-sub-approver');
+    const cetakKartuBtn = document.getElementById('menu-cetak-kartu');
 
-                // Tambahkan ikon gembok jika belum ada
-                const chevron = btn.querySelector('.chevron-icon');
-                if (chevron) {
-                    chevron.classList.add('hidden');
-                    const lockIcon = document.createElement('i');
-                    lockIcon.setAttribute('data-lucide', 'lock');
-                    lockIcon.className = 'w-4 h-4 text-sky-200 main-lock-icon';
-                    btn.appendChild(lockIcon);
-                }
-            }
+    if (approverBtn) {
+        approverBtn.classList.add('menu-disabled');
+        approverBtn.style.pointerEvents = 'none';
+        
+        if (!approverBtn.querySelector('.lock-icon-db')) {
+            const lockIcon = document.createElement('i');
+            lockIcon.setAttribute('data-lucide', 'lock');
+            lockIcon.className = 'w-4 h-4 text-white/40 ml-2 lock-icon-db';
+            approverBtn.appendChild(lockIcon);
+        }
+    }
+    if (approverContainer) {
+        approverContainer.querySelectorAll('a, button').forEach(item => {
+            item.classList.add('menu-disabled');
+            item.style.pointerEvents = 'none';
+            
+            // Tampilkan ikon gembok bawaan HTML jika ada di sebelahnya
+            const parent = item.parentElement;
+            const htmlLock = parent ? parent.querySelector('.lock-icon') : null;
+            if (htmlLock) htmlLock.classList.remove('hidden');
         });
-        // Refresh icons for new lock icons
-        if (window.lucide) window.lucide.createIcons();
     }
 
-    // Sembunyikan submenu yang dikecualikan dan beri tanda kunci (untuk link spesifik)
-    if (roleConfig.excludedSubMenus) {
-        for (const parentMenuId in roleConfig.excludedSubMenus) {
-            const excludedItems = roleConfig.excludedSubMenus[parentMenuId];
-            excludedItems.forEach(itemId => {
-                const submenuContainer = document.getElementById(parentMenuId);
-                if (submenuContainer) {
-                    const items = submenuContainer.querySelectorAll('a, div.flex');
-                    items.forEach(item => {
-                        const link = item.querySelector('a');
-                        if (link && link.textContent.toLowerCase().includes(itemId.replace(/-/g, ' '))) {
-                            link.classList.add('text-slate-500', 'cursor-not-allowed', 'disabled-link');
-                            const lockIcon = item.querySelector('.lock-icon');
-                            if (lockIcon) {
-                                lockIcon.classList.remove('hidden');
-                            }
-                        }
-                    });
-                }
-            });
+    // 5. CETAK KARTU HANYA UNTUK ROLE CHECKER
+    if (cetakKartuBtn) {
+        if (currentUserRole !== 'Checker') {
+            cetakKartuBtn.classList.add('menu-disabled');
+            cetakKartuBtn.style.pointerEvents = 'none';
+            
+            if (!cetakKartuBtn.querySelector('.lock-icon-db')) {
+                const lockIcon = document.createElement('i');
+                lockIcon.setAttribute('data-lucide', 'lock');
+                lockIcon.className = 'w-4 h-4 text-white/40 ml-auto lock-icon-db';
+                cetakKartuBtn.appendChild(lockIcon);
+            }
+        } else {
+            // Jika role adalah Checker, pastikan tidak terkunci
+            cetakKartuBtn.classList.remove('menu-disabled');
+            cetakKartuBtn.style.pointerEvents = 'auto';
+            const lock = cetakKartuBtn.querySelector('.lock-icon-db');
+            if (lock) lock.remove();
         }
     }
+
+    // Refresh icons untuk menampilkan ikon gembok yang baru ditambahkan
+    if (window.lucide) window.lucide.createIcons();
 }
 
+function handleLogin() {
+    const usernameInput = document.getElementById('username-input');
+    const passwordInput = document.getElementById('password-input');
+    const loginError = document.getElementById('login-error');
+    const loginPage = document.getElementById('login-page');
+    const mainAppContent = document.getElementById('main-app-content');
+    const loginButton = document.getElementById('login-button');
+
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+
+    if (!username || !password) {
+        loginError.innerText = 'Username dan Password harus diisi.';
+        loginError.classList.remove('hidden');
+        return;
+    }
+
+    // Set loading state
+    loginButton.disabled = true;
+    loginButton.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>Memvalidasi...</span>`;
+    if (window.lucide) window.lucide.createIcons();
+
+    // Pastikan supa siap
+    if (!supa) initSupabaseClient();
+
+    if (!supa) {
+        loginError.innerText = 'Koneksi database bermasalah.';
+        loginError.classList.remove('hidden');
+        loginButton.disabled = false;
+        loginButton.innerHTML = `<span>Masuk ke Sistem</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+
+    supa.from('user_access')
+        .select('*')
+        .eq('nip', username)
+        .eq('password', password)
+        .single()
+        .then(({ data, error }) => {
+            if (error || !data) {
+                loginError.innerText = 'NIP atau Password salah.';
+                loginError.classList.remove('hidden');
+                loginButton.disabled = false;
+                loginButton.innerHTML = `<span>Masuk ke Sistem</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+                if (window.lucide) window.lucide.createIcons();
+                showToastGagah('Akses Ditolak!', 'alert-triangle', 'text-rose-500');
+            } else {
+                currentUserRole = data.role;
+                const userAccessList = data.access || [];
+
+                // Simpan sesi login
+                localStorage.setItem('sipandu_userRole', currentUserRole);
+                localStorage.setItem('sipandu_username', username);
+                localStorage.setItem('sipandu_loginTime', Date.now().toString());
+                localStorage.setItem('sipandu_userAccess', JSON.stringify(userAccessList));
+
+                trackVisitor(currentUserRole);
+                loginError.classList.add('hidden');
+                loginPage.classList.add('hidden');
+                mainAppContent.classList.remove('hidden');
+                
+                // Pastikan sidebar tampil normal setelah login
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) sidebar.classList.remove('hidden');
+
+                showToastGagah(`Selamat datang, ${currentUserRole}!`, 'user-check', 'text-emerald-400');
+
+                // Terapkan izin menu berdasarkan role dan daftar akses spesifik
+                applyMenuPermissionsByData(data);
+                showPage('dashboard');
+
+                // Set auto logout 24 Jam
+                setTimeout(() => {
+                    handleLogoutSessionExpired();
+                }, 24 * 60 * 60 * 1000);
+            }
+        });
+}
+
+// Tambahkan listener untuk lookup role otomatis saat mengetik NIP
+function initLoginLookup() {
+    const usernameInput = document.getElementById('username-input');
+    const roleDisplay = document.getElementById('role-display');
+
+    if (usernameInput) {
+        usernameInput.addEventListener('input', (e) => {
+            const nip = e.target.value;
+            if (nip.length >= 4) {
+                // Pastikan supa sudah siap
+                if (!supa) initSupabaseClient();
+                
+                if (supa) {
+                    supa.from('user_access')
+                        .select('role')
+                        .eq('nip', nip)
+                        .single()
+                        .then(({ data }) => {
+                            if (data) {
+                                roleDisplay.value = data.role;
+                                roleDisplay.classList.add('text-emerald-600');
+                                roleDisplay.classList.remove('text-sky-600', 'text-amber-500', 'text-rose-400');
+                            } else {
+                                supa.from('data_pegawai')
+                                    .select('nama')
+                                    .eq('nip', nip)
+                                    .single()
+                                    .then(({ data: pData }) => {
+                                        if (pData) {
+                                            roleDisplay.value = 'Pegawai (Belum Ada Akses)';
+                                            roleDisplay.classList.remove('text-emerald-600', 'text-sky-600', 'text-rose-400');
+                                            roleDisplay.classList.add('text-amber-500');
+                                        } else {
+                                            roleDisplay.value = 'User Belum Terdaftar';
+                                            roleDisplay.classList.remove('text-emerald-600', 'text-sky-600', 'text-amber-500');
+                                            roleDisplay.classList.add('text-rose-400');
+                                        }
+                                    });
+                            }
+                        });
+                }
+            } else {
+                roleDisplay.value = '';
+            }
+        });
+    }
+}
 
 // Visitor Statistics Logic
 function trackVisitor(role) {
@@ -865,48 +980,9 @@ function trackVisitor(role) {
         time: loginTime
     });
 
-    // Keep only last 10 logins
     if (stats.recentLogins.length > 10) stats.recentLogins.pop();
 
     localStorage.setItem('visitor_stats', JSON.stringify(stats));
-}
-
-function handleLogin() {
-    const pinInput = document.getElementById('pin-input');
-    const loginError = document.getElementById('login-error');
-    const loginPage = document.getElementById('login-page');
-    const mainAppContent = document.getElementById('main-app-content');
-
-    const pin = pinInput.value;
-    const roleConfig = userRoles[pin];
-
-    if (roleConfig) {
-        currentUserRole = roleConfig.role;
-
-        // Simpan sesi login (60 Menit Inaktif / 24 Jam Hard Timeout)
-        localStorage.setItem('sipandu_userRole', currentUserRole);
-        localStorage.setItem('sipandu_loginTime', Date.now().toString());
-        localStorage.setItem('sipandu_pin', pin);
-
-        trackVisitor(currentUserRole); // Track visit on successful login
-        loginError.classList.add('hidden');
-        loginPage.classList.add('hidden');
-        mainAppContent.classList.remove('hidden');
-        showToastGagah(`Selamat datang, ${currentUserRole}!`, 'user-check', 'text-emerald-400');
-
-        applyMenuPermissions(pin); // Terapkan izin menu berdasarkan PIN
-        showPage('dashboard'); // Tampilkan dashboard setelah login
-
-        // Set timeout untuk auto logout 24 Jam
-        setTimeout(() => {
-            handleLogoutSessionExpired();
-        }, 24 * 60 * 60 * 1000);
-    } else {
-        loginError.innerText = 'PIN salah. Silakan coba lagi.';
-        loginError.classList.remove('hidden');
-        pinInput.value = ''; // Bersihkan input PIN
-        showToastGagah('PIN salah!', 'alert-triangle', 'text-rose-500');
-    }
 }
 
 function handleLogout() {
@@ -929,58 +1005,92 @@ function confirmLogout() {
 
     // Bersihkan sesi
     localStorage.removeItem('sipandu_userRole');
+    localStorage.removeItem('sipandu_username');
     localStorage.removeItem('sipandu_loginTime');
+    localStorage.removeItem('sipandu_userAccess');
     localStorage.removeItem('sipandu_pin');
 
-    const loginPage = document.getElementById('login-page');
-    const mainAppContent = document.getElementById('main-app-content');
-    const pinInput = document.getElementById('pin-input');
-
-    mainAppContent.classList.add('hidden');
-    loginPage.classList.remove('hidden');
-    pinInput.value = ''; // Bersihkan input PIN
-    currentUserRole = null; // Reset peran pengguna
-    showToastGagah('Anda telah logout.', 'log-out', 'text-slate-400');
+    // Langsung arahkan ke index.html untuk reset total
+    window.location.href = 'index.html';
 }
 
 function handleLogoutSessionExpired() {
     // Bersihkan sesi karena expired
     localStorage.removeItem('sipandu_userRole');
+    localStorage.removeItem('sipandu_username');
     localStorage.removeItem('sipandu_loginTime');
+    localStorage.removeItem('sipandu_userAccess');
     localStorage.removeItem('sipandu_pin');
 
+    // Langsung arahkan ke index.html untuk reset total
+    window.location.href = 'index.html';
+}
+
+// Fungsi untuk kembali ke login
+window.handleBackToLogin = function() {
+    window.location.href = 'index.html';
+};
+
+// Fungsi untuk menampilkan halaman ganti password dari login
+function showForgotPassword() {
     const loginPage = document.getElementById('login-page');
     const mainAppContent = document.getElementById('main-app-content');
-    const pinInput = document.getElementById('pin-input');
-
-    if (mainAppContent && loginPage) {
-        mainAppContent.classList.add('hidden');
-        loginPage.classList.remove('hidden');
-    }
-    if (pinInput) pinInput.value = '';
-    currentUserRole = null;
-    showToastGagah('Sesi login habis. Silakan login kembali.', 'clock', 'text-rose-500');
-
-    // Tutup modal logout jika sedang terbuka
-    const modal = document.getElementById('logout-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
+    const sidebar = document.getElementById('sidebar');
+    
+    if (loginPage) loginPage.classList.add('hidden');
+    if (mainAppContent) mainAppContent.classList.remove('hidden');
+    
+    // SEMBUNYIKAN SIDEBAR saat ganti password dari login agar tidak bisa akses dashboard
+    if (sidebar) sidebar.classList.add('hidden');
+    
+    showPage('ganti-password');
 }
 
 // Panggil showPage saat halaman dimuat pertama kali
 document.addEventListener('DOMContentLoaded', () => {
     initIcons();
+
+    // Cek sesi login yang ada
+    const savedRole = localStorage.getItem('sipandu_userRole');
+    const savedUsername = localStorage.getItem('sipandu_username');
+    const savedAccess = localStorage.getItem('sipandu_userAccess');
+    const loginTime = localStorage.getItem('sipandu_loginTime');
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    if (savedRole && savedUsername && loginTime && (Date.now() - parseInt(loginTime) < twentyFourHours)) {
+        // Sesi masih valid, langsung masuk
+        const loginPage = document.getElementById('login-page');
+        const mainAppContent = document.getElementById('main-app-content');
+        if (loginPage) loginPage.classList.add('hidden');
+        if (mainAppContent) mainAppContent.classList.remove('hidden');
+        
+        currentUserRole = savedRole;
+        try {
+            currentUserAccess = savedAccess ? JSON.parse(savedAccess) : [];
+        } catch(e) {
+            currentUserAccess = [];
+        }
+        
+        applyMenuPermissionsByData({ role: savedRole, access: currentUserAccess });
+        showPage('dashboard');
+    } else {
+        // Belum login, tampilkan semua menu tapi DISABLED
+        applyMenuPermissionsByData(null);
+    }
+
     // Tambahkan event listener untuk tombol login
     const loginButton = document.getElementById('login-button');
     if (loginButton) {
         loginButton.addEventListener('click', handleLogin);
     }
 
-    // Tambahkan event listener untuk input PIN (tekan Enter)
-    const pinInput = document.getElementById('pin-input');
-    if (pinInput) {
-        pinInput.addEventListener('keypress', (e) => {
+    // Inisialisasi lookup role otomatis
+    initLoginLookup();
+
+    // Tambahkan event listener untuk input Password (tekan Enter)
+    const passwordInput = document.getElementById('password-input');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 handleLogin();
             }
@@ -992,7 +1102,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutButton) {
         logoutButton.addEventListener('click', handleLogout);
     }
-    // showPage('dashboard'); // Tampilkan dashboard secara default (sekarang dikontrol oleh login)
 });
 
 function initMutasiForm() {
@@ -1408,9 +1517,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cek sesi login
     const storedRole = localStorage.getItem('sipandu_userRole');
     const loginTime = localStorage.getItem('sipandu_loginTime');
-    const storedPin = localStorage.getItem('sipandu_pin');
+    const storedAccess = localStorage.getItem('sipandu_userAccess');
 
-    if (storedRole && loginTime && storedPin) {
+    if (storedRole && loginTime) {
         const now = Date.now();
         const diff = now - parseInt(loginTime, 10);
         const sessionDuration = 24 * 60 * 60 * 1000; // 24 Jam
@@ -1418,9 +1527,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (diff < sessionDuration) {
             // Sesi valid
             currentUserRole = storedRole;
+            try {
+                currentUserAccess = storedAccess ? JSON.parse(storedAccess) : [];
+            } catch(e) {
+                currentUserAccess = [];
+            }
+            
             document.getElementById('login-page').classList.add('hidden');
             document.getElementById('main-app-content').classList.remove('hidden');
-            applyMenuPermissions(storedPin);
+            
+            // Terapkan izin menu
+            applyMenuPermissionsByData({ role: currentUserRole, access: currentUserAccess });
 
             // Set timeout sisa waktu
             setTimeout(() => {
@@ -1429,7 +1546,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Sesi expired
             localStorage.removeItem('sipandu_userRole');
+            localStorage.removeItem('sipandu_username');
             localStorage.removeItem('sipandu_loginTime');
+            localStorage.removeItem('sipandu_userAccess');
             localStorage.removeItem('sipandu_pin');
         }
     }

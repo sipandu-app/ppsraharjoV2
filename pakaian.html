@@ -17,8 +17,8 @@
         .animate-in { animation: fadeIn 0.3s ease-out forwards; }
     </style>
 </head>
-<body class="bg-slate-50 overflow-hidden p-3 h-screen flex flex-col gap-3">
-    <div id="root" class="flex-1 flex flex-col gap-3 overflow-hidden"></div>
+<body class="bg-slate-50 overflow-hidden p-0 h-screen flex flex-col gap-0">
+    <div id="root" class="flex-1 flex flex-col gap-0 overflow-hidden"></div>
 
     <!-- React and ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -168,7 +168,8 @@
                     const { data, error } = await supabaseClient
                         .from('pakaian')
                         .select('*')
-                        .order('created_at', { ascending: false });
+                        .order('nomor_bp', { ascending: false, nullsFirst: false })
+                        .order('tanggal_belanja', { ascending: false });
                     
                     if (error) {
                         console.error("Supabase Error:", error);
@@ -558,7 +559,7 @@
             const thClass = "px-4 py-3.5 text-[9.5px] font-black uppercase tracking-wider text-white border-r border-sky-400/40 last:border-0 cursor-pointer hover:bg-sky-600 transition-colors";
 
             return (
-                <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+                <div className="flex-1 flex flex-col gap-0 overflow-hidden">
                     {/* Notification */}
                     {notification.show && (
                         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[1001] px-6 py-3 rounded-full shadow-2xl font-bold text-[11px] uppercase tracking-widest animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'bg-sky-500 text-white' : 'bg-rose-600 text-white'}`}>
@@ -610,11 +611,10 @@
                         </div>
                     )}
 
-                    <header className="h-16 flex-none bg-white border border-slate-200 px-6 flex justify-between items-center rounded-2xl shadow-sm z-20">
+                    <header className="h-14 flex-none bg-white border-b border-slate-200 px-4 flex justify-between items-center z-20">
                         <div className="flex items-center gap-3">
-                            <div className="bg-sky-500 p-2 rounded-xl text-white shadow-lg shadow-sky-100"><Shirt size={18} /></div>
                             <div>
-                                <h1 className="font-black text-[13px] uppercase tracking-tight text-slate-800 leading-none mb-0.5">BELANJA <span className="text-sky-500">PAKAIAN</span></h1>
+                                <h1 className="font-black text-[12px] uppercase tracking-tight text-slate-800 leading-none mb-0.5">Sistem Informasi Pengadaan Panti <span className="text-sky-500">v6.0</span></h1>
                                 <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pengadaan Pakaian Penerima Manfaat </p>
                             </div>
                         </div>
@@ -625,7 +625,7 @@
                         </nav>
                     </header>
 
-                    <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                    <main className="flex-1 overflow-y-auto p-4 bg-white">
                         {activeTab === 'input' && (
                             <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
@@ -862,10 +862,9 @@
                     </main>
 
                     {/* Footer Info */}
-                    <footer className="mt-auto px-4 py-8 text-center">
+                    <footer className="mt-auto py-4 text-center">
                         <div className="max-w-xs mx-auto flex flex-col items-center gap-2 opacity-20">
-                            <Shirt size={24} className="text-slate-400"/>
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Sistem Informasi Pengadaan Panti v6.0</p>
+                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400"></p>
                         </div>
                     </footer>
                 </div>

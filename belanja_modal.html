@@ -175,7 +175,8 @@
                     const { data, error } = await supabaseClient
                         .from(tableName)
                         .select('*')
-                        .order('created_at', { ascending: false });
+                        .order('nomor_bp', { ascending: false, nullsFirst: false })
+                        .order('tanggal_belanja', { ascending: false });
                     
                     if (error) {
                         console.error("Supabase Error:", error);

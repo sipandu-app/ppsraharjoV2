@@ -293,6 +293,22 @@
         .animate-pop {
             animation: pop-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
+
+        /* Gaya untuk menu yang dinonaktifkan */
+        .menu-disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            filter: grayscale(1);
+            pointer-events: none;
+        }
+
+        .menu-disabled i {
+            color: #cbd5e1 !important;
+        }
+
+        .menu-disabled span {
+            color: #cbd5e1 !important;
+        }
     </style>
 
     <script>
@@ -319,15 +335,54 @@
     <div id="login-page"
         class="fixed inset-0 bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md text-center space-y-6">
-            <img src="maskot-sipandu.png" alt="Logo Sipandu" class="w-32 h-32 mx-auto mb-4">
-            <h2 class="text-3xl font-black text-slate-800">SIPANDU Login</h2>
-            <p class="text-slate-500">Masukkan PIN "TEST2026" untuk melanjutkan</p>
-            <input type="password" id="pin-input" placeholder="PIN"
-                class="w-full p-3.5 bg-slate-100 border-2 border-slate-200 focus:border-sky-400 rounded-xl text-center font-bold text-lg outline-none transition-all"
-                maxlength="20">
+            <img src="maskot-sipandu.png" alt="Logo Sipandu" class="w-24 h-24 mx-auto mb-2">
+            <div class="space-y-1">
+                <h2 class="text-3xl font-black text-slate-800 uppercase tracking-tighter">SIPANDU Login</h2>
+                <p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Sistem Informasi Penyimpanan Data Terpadu</p>
+            </div>
+            
+            <div class="space-y-4 text-left">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Username (NIP)</label>
+                    <div class="relative group">
+                        <i data-lucide="user" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
+                        <input type="text" id="username-input" placeholder="Masukkan NIP"
+                            class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 focus:border-sky-400 focus:bg-white rounded-2xl font-bold text-sm outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Role / Jabatan</label>
+                    <div class="relative">
+                        <i data-lucide="shield" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="role-display" placeholder="Role Terdeteksi Otomatis" readonly
+                            class="w-full pl-11 pr-4 py-3.5 bg-slate-100 border-2 border-slate-100 rounded-2xl font-black text-xs text-sky-600 uppercase outline-none cursor-default">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Password</label>
+                    <div class="relative group">
+                        <i data-lucide="key" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors"></i>
+                        <input type="password" id="password-input" placeholder="Masukkan Password"
+                            class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 focus:border-sky-400 focus:bg-white rounded-2xl font-bold text-sm outline-none transition-all">
+                    </div>
+                </div>
+            </div>
+
             <button id="login-button"
-                class="w-full bg-sky-500 text-white font-bold py-3 rounded-xl hover:bg-sky-600 transition-colors">Login</button>
-            <p id="login-error" class="text-rose-500 text-sm hidden"></p>
+                class="w-full bg-sky-500 text-white font-black py-4 rounded-2xl hover:bg-sky-600 transition-all shadow-lg shadow-sky-100 uppercase tracking-widest text-xs flex items-center justify-center gap-2 group">
+                <span>Masuk ke Sistem</span>
+                <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+
+            <div class="pt-2">
+                <button onclick="showForgotPassword()" class="text-[10px] font-black text-slate-400 hover:text-sky-500 uppercase tracking-widest transition-colors">
+                    Ganti Password
+                </button>
+            </div>
+            
+            <p id="login-error" class="text-rose-500 text-[10px] font-bold uppercase tracking-wider hidden"></p>
         </div>
     </div>
 
@@ -482,7 +537,6 @@
                         <div class="flex items-center justify-between py-1 pr-4">
                             <button onclick="showPage('pakaian')" id="menu-pakaian"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
-                                <i data-lucide="shirt" class="w-4 h-4"></i>
                                 <span class="font-bold text-xs">Belanja Pakaian</span>
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
@@ -671,11 +725,27 @@
                         <i data-lucide="chevron-down" class="w-4 h-4 chevron-icon"></i>
                     </button>
                     <div id="sub-database" class="submenu-container pl-11 space-y-0">
+                          <div class="flex items-center justify-between py-1 pr-4">
+                              <button onclick="showPage('setting-akses')" id="menu-setting-akses"
+                                  class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                  <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                  <span class="font-bold text-xs">Setting Akses</span>
+                              </button>
+                              <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                          </div>
                         <div class="flex items-center justify-between py-1 pr-4">
                             <button onclick="showPage('restore-json')" id="menu-restore-json-main"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="upload-cloud" class="w-4 h-4"></i>
                                 <span class="font-bold text-xs">Restore JSON</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('cetak-kartu')" id="menu-cetak-kartu"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="contact-2" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Cetak Kartu Akun</span>
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>

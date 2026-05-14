@@ -121,6 +121,7 @@
         const History = (p) => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></>} />;
         const Settings = (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></>} />;
         const Edit2 = (p) => <Icon {...p} path={<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />} />;
+        const Lock = (p) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>} />;
         const X = (p) => <Icon {...p} path={<path d="M18 6 6 18M6 6l12 12" />} />;
 
         // --- UTILS ---
@@ -229,6 +230,7 @@
                 }
 
                 if (!editingId) {
+                    showNotif("Menyimpan & Mengunduh Bukti...", "info");
                     const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
                     const link = document.createElement('a');
                     link.download = `BP-${form.no_bp || 'SPPD'}-${form.tanggal_bp}.png`;
@@ -237,9 +239,11 @@
 
                     const msg = `*LAPORAN OPERASIONAL PPS RAHARJO*\n---------------------------\nTanggal: ${form.tanggal_bp}\nSSK: ${form.ssk}\nPenerima: ${form.penerima.filter(p => p).join(', ')}\nTotal: Rp ${formatNumber(totalBayar)}\n\n_Bukti gambar telah diunduh, silakan lampirkan._`;
                     window.open(`https://wa.me/62${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                    showNotif("Data Berhasil Disimpan!");
+                } else {
+                    showNotif("Data Berhasil Diperbarui!");
                 }
 
-                showNotif(editingId ? "Data Berhasil Diperbarui!" : "Data Berhasil Disimpan!");
                 setEditingId(null);
                 setForm({
                     tanggal_bp: new Date().toISOString().split('T')[0],
@@ -247,9 +251,11 @@
                     sppd: 0, bensin: 0, tol: 0, hotel: 0
                 });
                 fetchData();
+                setActiveTab('riwayat');
             };
 
             const handleEdit = (item) => {
+                if (item.is_locked) return showNotif("Data terkunci!", "error");
                 setForm({
                     tanggal_bp: item.tanggal_bp,
                     no_bp: item.no_bp || '',
@@ -267,7 +273,19 @@
                 showNotif("Mode Edit Aktif", "info");
             };
 
-            const handleDelete = (id) => setPinModal({ show: true, type: 'delete', extra: id });
+            const handleDelete = (id) => {
+                const item = data.find(d => d.id === id);
+                if (item && item.is_locked) return showNotif("Data terkunci!", "error");
+                setPinModal({ show: true, type: 'delete', extra: id });
+            };
+
+            const handleToggleLock = (item) => {
+                setPinModal({ 
+                    show: true, 
+                    type: item.is_locked ? 'unlock' : 'lock', 
+                    extra: item.id 
+                });
+            };
 
             const handlePinSubmit = async (val) => {
                 if (val !== MASTER_PIN) {
@@ -286,6 +304,19 @@
                     }
                 } else if (pinModal.type === 'restore') {
                     await performRestore(pinModal.extra);
+                } else if (pinModal.type === 'lock' || pinModal.type === 'unlock') {
+                    const isLocking = pinModal.type === 'lock';
+                    const { error } = await supabaseClient
+                        .from(TABLE_NAME)
+                        .update({ is_locked: isLocking })
+                        .eq('id', pinModal.extra);
+                    
+                    if (error) {
+                        showNotif("Gagal: " + error.message, "error");
+                    } else {
+                        showNotif(isLocking ? "Data Berhasil Dikunci!" : "Kunci Berhasil Dibuka!");
+                        fetchData();
+                    }
                 }
 
                 setPinModal({ show: false, type: '', extra: null });
@@ -430,7 +461,11 @@
             return (
                 <div className="min-h-screen py-6 px-4 lg:px-12 bg-slate-50">
                     {notif && (
-                        <div className={`fixed top-6 right-6 z-[1000] px-8 py-4 rounded-2xl shadow-2xl animate-in font-black text-[10px] uppercase tracking-widest ${notif.type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white'}`}>
+                        <div className={`fixed top-6 right-6 z-[1000] px-8 py-4 rounded-2xl shadow-2xl animate-in font-black text-[10px] uppercase tracking-widest ${
+                            notif.type === 'error' ? 'bg-rose-600 text-white' : 
+                            notif.type === 'info' ? 'bg-blue-600 text-white' :
+                            'bg-slate-900 text-white'
+                        }`}>
                             {notif.msg}
                         </div>
                     )}
@@ -753,7 +788,7 @@
                                                     <div className="flex flex-wrap items-center gap-3 bg-blue-600 text-white p-3 rounded-2xl shadow-lg">
                                                         <div className="flex flex-col border-r border-blue-400 pr-3">
                                                             <span className="text-[7px] font-black text-blue-200 uppercase tracking-widest">Total Terfilter</span>
-                                                            <span className="text-xs font-black mono leading-none">Rp {formatNumber(totals.total)}</span>
+                                                            <span className="text-[10px] font-black mono leading-none">Rp {formatNumber(totals.total)}</span>
                                                         </div>
                                                         <div className="flex gap-4">
                                                             {[
@@ -763,8 +798,8 @@
                                                                 { label: 'Hotel', val: totals.hotel }
                                                             ].map(t => (
                                                                 <div key={t.label} className="flex flex-col">
-                                                                    <span className="text-[6px] font-black text-blue-300 uppercase leading-none mb-0.5">{t.label}</span>
-                                                                    <span className="text-[9px] font-black mono leading-none text-white">Rp {formatNumber(t.val)}</span>
+                                                                    <span className="text-[7px] font-black text-blue-300 uppercase leading-none mb-0.5">{t.label}</span>
+                                                                    <span className="text-[10px] font-black mono leading-none text-white">Rp {formatNumber(t.val)}</span>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -818,11 +853,14 @@
                                                                 <td className="px-6 py-4 text-right font-black text-slate-950"> {formatNumber(d.total)}</td>
                                                                 <td className="px-6 py-4 text-center">
                                                                     <div className="flex justify-center gap-2">
-                                                                        <button onClick={() => handleEdit(d)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                                                                        <button onClick={() => handleEdit(d)} className={`p-2 rounded-lg transition-all ${d.is_locked ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}>
                                                                             <Edit2 size={16} />
                                                                         </button>
-                                                                        <button onClick={() => handleDelete(d.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                                                                        <button onClick={() => handleDelete(d.id)} className={`p-2 rounded-lg transition-all ${d.is_locked ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'}`}>
                                                                             <Trash2 size={16} />
+                                                                        </button>
+                                                                        <button onClick={() => handleToggleLock(d)} className={`p-2 rounded-lg transition-all ${d.is_locked ? 'text-amber-500 bg-amber-50 shadow-inner' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
+                                                                            {d.is_locked ? <Lock size={16} /> : <Unlock size={16} />}
                                                                         </button>
                                                                     </div>
                                                                 </td>

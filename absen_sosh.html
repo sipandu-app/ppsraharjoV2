@@ -574,6 +574,11 @@
             applyFilters();
         }
 
+        // Event listeners for filters
+        document.getElementById('filter-unit').addEventListener('change', applyFilters);
+        document.getElementById('filter-periode').addEventListener('change', applyFilters);
+        document.getElementById('filter-bulan').addEventListener('change', applyFilters);
+
         // Initial Load
         syncData();
     </script>

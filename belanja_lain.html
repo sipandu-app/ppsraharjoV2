@@ -640,8 +640,8 @@
                 const { data, error } = await supabaseClient
                     .from(DB_TABLE)
                     .select('*')
-                    .order('tanggal_belanja', { ascending: false })
-                    .order('created_at', { ascending: false });
+                    .order('nomor_bp', { ascending: false, nullsFirst: false })
+                    .order('tanggal_belanja', { ascending: false });
 
                 if (error) throw error;
                 rawData = data || [];
