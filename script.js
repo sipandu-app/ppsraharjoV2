@@ -840,6 +840,7 @@ function handleLogin() {
 
     // Set loading state
     loginButton.disabled = true;
+    const originalContent = `<span>Masuk ke Sistem</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
     loginButton.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>Memvalidasi...</span>`;
     if (window.lucide) window.lucide.createIcons();
 
@@ -850,24 +851,26 @@ function handleLogin() {
         loginError.innerText = 'Koneksi database bermasalah.';
         loginError.classList.remove('hidden');
         loginButton.disabled = false;
-        loginButton.innerHTML = `<span>Masuk ke Sistem</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        loginButton.innerHTML = originalContent;
         if (window.lucide) window.lucide.createIcons();
         return;
     }
 
-    supa.from('user_access')
+    // Gunakan Promise.race untuk timeout jika koneksi lambat
+    const loginPromise = supa.from('user_access')
         .select('*')
         .eq('nip', username)
         .eq('password', password)
-        .single()
+        .single();
+
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 10000)
+    );
+
+    Promise.race([loginPromise, timeoutPromise])
         .then(({ data, error }) => {
             if (error || !data) {
-                loginError.innerText = 'NIP atau Password salah.';
-                loginError.classList.remove('hidden');
-                loginButton.disabled = false;
-                loginButton.innerHTML = `<span>Masuk ke Sistem</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
-                if (window.lucide) window.lucide.createIcons();
-                showToastGagah('Akses Ditolak!', 'alert-triangle', 'text-rose-500');
+                throw new Error(error ? error.message : 'Invalid credentials');
             } else {
                 currentUserRole = data.role;
                 const userAccessList = data.access || [];
@@ -898,6 +901,15 @@ function handleLogin() {
                     handleLogoutSessionExpired();
                 }, 24 * 60 * 60 * 1000);
             }
+        })
+        .catch(err => {
+            console.error('Login Error:', err);
+            loginError.innerText = err.message === 'timeout' ? 'Koneksi lambat, coba lagi.' : 'NIP atau Password salah.';
+            loginError.classList.remove('hidden');
+            loginButton.disabled = false;
+            loginButton.innerHTML = originalContent;
+            if (window.lucide) window.lucide.createIcons();
+            showToastGagah('Akses Ditolak!', 'alert-triangle', 'text-rose-500');
         });
 }
 
