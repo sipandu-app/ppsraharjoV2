@@ -836,8 +836,8 @@ function handleLogin() {
     const mainAppContent = document.getElementById('main-app-content');
     const loginButton = document.getElementById('login-button');
 
-    const username = usernameInput.value;
-    const password = passwordInput.value;
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
 
     if (!username || !password) {
         loginError.innerText = 'Username dan Password harus diisi.';
@@ -880,7 +880,6 @@ function handleLogin() {
                 throw new Error(error ? error.message : 'Invalid credentials');
             } else {
                 currentUserRole = data.role;
-                currentUserName = fullName;
                 const userAccessList = data.access || [];
 
                 // Ambil Nama Lengkap dari data_pegawai
@@ -894,6 +893,8 @@ function handleLogin() {
                 } catch (e) {
                     console.warn('Gagal mengambil nama pegawai:', e);
                 }
+
+                currentUserName = fullName;
 
                 // Simpan sesi login
                 localStorage.setItem('sipandu_userRole', currentUserRole);
