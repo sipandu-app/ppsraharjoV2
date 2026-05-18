@@ -155,6 +155,7 @@ function showPage(pageId) {
                     </div>
                     <div class="flex space-x-3">
                         <div class="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/20 rounded-lg text-[9px] font-bold uppercase tracking-widest">Role: ${currentUserRole || 'Guest'}</div>
+                        <div class="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/20 rounded-lg text-[9px] font-bold uppercase tracking-widest">Nama: ${currentUserName || '-'}</div>
                     </div>
                 </div>
             </div>
@@ -350,6 +351,11 @@ function showPage(pageId) {
         'lap_bmd': `
             <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
                 <iframe src="./lap_bmd.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
+        'apbd': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./apbd.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
         'absensi-pm': `
@@ -720,6 +726,7 @@ function clearVisitorStats() {
 
 // Global state
 let currentUserRole = null;
+let currentUserName = null;
 let currentUserAccess = [];
 
 // Fungsi untuk menerapkan izin berdasarkan data dari database (Kolom 'access' yang dicentang)
@@ -750,8 +757,8 @@ function applyMenuPermissionsByData(userData) {
         // Normalisasi ID (Menghilangkan suffix jika ada)
         if (pageId.includes('restore-json')) pageId = 'restore-json';
         
-        // Pengecualian: Ganti Password dan Dashboard selalu aktif
-        if (pageId === 'ganti-password' || pageId === 'dashboard') return;
+        // Pengecualian: Ganti Password, Dashboard, dan APBD selalu aktif
+        if (pageId === 'ganti-password' || pageId === 'dashboard' || pageId === 'apbd') return;
 
         // Jika ID halaman TIDAK ada dalam daftar 'access' di database (tidak dicentang)
         // Atau jika user belum login (Guest)
@@ -868,16 +875,30 @@ function handleLogin() {
     );
 
     Promise.race([loginPromise, timeoutPromise])
-        .then(({ data, error }) => {
+        .then(async ({ data, error }) => {
             if (error || !data) {
                 throw new Error(error ? error.message : 'Invalid credentials');
             } else {
                 currentUserRole = data.role;
+                currentUserName = fullName;
                 const userAccessList = data.access || [];
+
+                // Ambil Nama Lengkap dari data_pegawai
+                let fullName = data.role;
+                try {
+                    const { data: pData } = await supa.from('data_pegawai')
+                        .select('nama')
+                        .eq('nip', username)
+                        .single();
+                    if (pData) fullName = pData.nama;
+                } catch (e) {
+                    console.warn('Gagal mengambil nama pegawai:', e);
+                }
 
                 // Simpan sesi login
                 localStorage.setItem('sipandu_userRole', currentUserRole);
                 localStorage.setItem('sipandu_username', username);
+                localStorage.setItem('sipandu_userName', fullName);
                 localStorage.setItem('sipandu_loginTime', Date.now().toString());
                 localStorage.setItem('sipandu_userAccess', JSON.stringify(userAccessList));
 
@@ -886,11 +907,14 @@ function handleLogin() {
                 loginPage.classList.add('hidden');
                 mainAppContent.classList.remove('hidden');
                 
+                // Update Profile UI
+                updateProfileUI(fullName, currentUserRole);
+
                 // Pastikan sidebar tampil normal setelah login
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar) sidebar.classList.remove('hidden');
 
-                showToastGagah(`Selamat datang, ${currentUserRole}!`, 'user-check', 'text-emerald-400');
+                showToastGagah(`Selamat datang, ${fullName}!`, 'user-check', 'text-emerald-400');
 
                 // Terapkan izin menu berdasarkan role dan daftar akses spesifik
                 applyMenuPermissionsByData(data);
@@ -997,6 +1021,19 @@ function trackVisitor(role) {
     localStorage.setItem('visitor_stats', JSON.stringify(stats));
 }
 
+function updateProfileUI(name, role) {
+    const nameEl = document.getElementById('profile-name');
+    const roleEl = document.getElementById('profile-role');
+    const initialsEl = document.getElementById('profile-initials');
+
+    if (nameEl) nameEl.innerText = name || 'User';
+    if (roleEl) roleEl.innerText = role || 'Guest';
+    if (initialsEl && name) {
+        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        initialsEl.innerText = initials;
+    }
+}
+
 function handleLogout() {
     const modal = document.getElementById('logout-modal');
     if (modal) {
@@ -1018,6 +1055,7 @@ function confirmLogout() {
     // Bersihkan sesi
     localStorage.removeItem('sipandu_userRole');
     localStorage.removeItem('sipandu_username');
+    localStorage.removeItem('sipandu_userName');
     localStorage.removeItem('sipandu_loginTime');
     localStorage.removeItem('sipandu_userAccess');
     localStorage.removeItem('sipandu_pin');
@@ -1030,6 +1068,7 @@ function handleLogoutSessionExpired() {
     // Bersihkan sesi karena expired
     localStorage.removeItem('sipandu_userRole');
     localStorage.removeItem('sipandu_username');
+    localStorage.removeItem('sipandu_userName');
     localStorage.removeItem('sipandu_loginTime');
     localStorage.removeItem('sipandu_userAccess');
     localStorage.removeItem('sipandu_pin');
@@ -1065,6 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cek sesi login yang ada
     const savedRole = localStorage.getItem('sipandu_userRole');
     const savedUsername = localStorage.getItem('sipandu_username');
+    const savedName = localStorage.getItem('sipandu_userName');
     const savedAccess = localStorage.getItem('sipandu_userAccess');
     const loginTime = localStorage.getItem('sipandu_loginTime');
     const twentyFourHours = 24 * 60 * 60 * 1000;
@@ -1077,12 +1117,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mainAppContent) mainAppContent.classList.remove('hidden');
         
         currentUserRole = savedRole;
+        currentUserName = savedName;
         try {
             currentUserAccess = savedAccess ? JSON.parse(savedAccess) : [];
         } catch(e) {
             currentUserAccess = [];
         }
         
+        updateProfileUI(savedName, savedRole);
         applyMenuPermissionsByData({ role: savedRole, access: currentUserAccess });
         showPage('dashboard');
     } else {

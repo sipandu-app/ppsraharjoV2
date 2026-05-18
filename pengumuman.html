@@ -320,14 +320,6 @@
                 }
             };
 
-            const isNew = (dateStr) => {
-                const date = new Date(dateStr);
-                const now = new Date();
-                const diffTime = Math.abs(now - date);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays <= 7;
-            };
-
             const filtered = data.filter(d => 
                 d.judul?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 d.no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -383,13 +375,13 @@
                                 {loading && <Loader2 className="animate-spin text-emerald-600" size={12} />}
                             </div>
                             <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                                {filtered.map((item) => (
+                                {filtered.map((item, index) => (
                                     <div 
                                         key={item.id} 
                                         onClick={() => setSelected(item)}
                                         className={`p-4 rounded-2xl cursor-pointer transition-all border relative overflow-hidden ${selected?.id === item.id ? 'bg-emerald-600 border-emerald-600 shadow-lg text-white' : 'bg-white border-emerald-100 hover:border-emerald-300 hover:shadow-md'}`}
                                     >
-                                        {isNew(item.created_at) && (
+                                        {item.id === data[0]?.id && (
                                             <div className={`absolute top-0 right-0 px-3 py-1 text-[8px] font-black uppercase tracking-tighter rounded-bl-xl flex items-center gap-1 animate-pulse-soft ${selected?.id === item.id ? 'bg-white text-emerald-600' : 'bg-emerald-600 text-white'}`}>
                                                 <Sparkles size={8} /> TERBARU
                                             </div>
@@ -607,6 +599,7 @@
                                     <input 
                                         type="password" 
                                         autoFocus
+                                        autoComplete="new-password"
                                         placeholder="PIN KEAMANAN" 
                                         className="w-full bg-slate-100 p-4 rounded-xl text-center text-xl font-black tracking-widest outline-none border-2 border-transparent focus:border-blue-500 transition-all" 
                                         value={pin}

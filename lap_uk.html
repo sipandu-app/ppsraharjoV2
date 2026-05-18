@@ -703,6 +703,7 @@
                     type="password"
                     autoFocus
                     maxLength={3}
+                    autoComplete="new-password"
                     className={`w-full text-center text-3xl font-black tracking-[0.5em] py-4 bg-slate-100 rounded-2xl outline-none border-2 transition-all ${pinError ? 'border-red-400 animate-shake text-red-500' : 'border-transparent focus:border-emerald-500 focus:bg-white'}`}
                     value={pinInput}
                     onChange={(e) => { setPinInput(e.target.value); setPinError(false); }}

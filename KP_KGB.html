@@ -648,7 +648,7 @@
                             </div>
                             <div className="relative">
                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input type="text" placeholder="CARI NAMA / NIP..." className="pl-11 pr-4 py-2.5 bg-slate-100 rounded-xl w-48 outline-none border border-transparent focus:border-slate-950 transition-all font-bold uppercase text-[10px]" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                <input type="text" placeholder="CARI NAMA / NIP..." className="pl-11 pr-4 py-2.5 bg-slate-100 rounded-xl w-48 outline-none border border-transparent focus:border-slate-950 transition-all font-bold uppercase text-[10px]" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} autoComplete="off" />
                             </div>
                             <button onClick={handleExportExcel} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
                                 <FileSpreadsheet size={16} /> <span>UNDUH EXCEL</span>
@@ -826,6 +826,7 @@
                                                         }} 
                                                         onBlur={e => handleNipLookup(e.target.value)}
                                                         placeholder="NIP..."
+                                                        autoComplete="off"
                                                     />
                                                     <button onClick={() => handleNipLookup(form.nip)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition-all shadow-sm"><Search size={12} /></button>
                                                 </div>
@@ -922,7 +923,7 @@
                                     <h3 className="text-[16px] font-black uppercase tracking-tight text-slate-950">PIN Otentikasi</h3>
                                     <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Masukkan PIN </p>
                                 </div>
-                                <input type="password" autoFocus maxLength={3} className="w-full text-center text-6xl font-black outline-none bg-slate-50 py-5 rounded-[2rem] tracking-[1.5rem] border-2 border-transparent focus:border-slate-950 shadow-inner" placeholder="···" value={pinInput} onChange={e => handlePinSubmit(e.target.value)} />
+                                <input type="password" autoFocus maxLength={3} className="w-full text-center text-6xl font-black outline-none bg-slate-50 py-5 rounded-[2rem] tracking-[1.5rem] border-2 border-transparent focus:border-slate-950 shadow-inner" placeholder="···" value={pinInput} onChange={e => handlePinSubmit(e.target.value)} autoComplete="new-password" />
                                 <button onClick={() => { setPinModal({show: false}); setPinInput(''); }} className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:underline">Batal</button>
                             </div>
                         </div>

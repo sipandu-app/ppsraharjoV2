@@ -738,7 +738,7 @@
                             <button onclick="showPage('restore-json')" id="menu-restore-json-main"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-                                <span class="font-bold text-xs">Backup-Restore Data</span>
+                                <span class="font-bold text-xs">Restore Data</span>
                             </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
@@ -758,12 +758,12 @@
             <div class="p-4 bg-sky-600 border-t border-sky-400/50">
                 <div class="flex items-center space-x-3 p-2 rounded-xl bg-white/10 cursor-pointer hover:bg-white/20 transition-all"
                     onclick="handleAdminClick()">
-                    <div
+                    <div id="profile-initials"
                         class="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-sky-500 text-[10px]">
                         AD</div>
                     <div class="flex-1 overflow-hidden text-[10px]">
-                        <p class="font-black truncate uppercase">Admin </p>
-                        <p class="text-sky-100 font-bold uppercase opacity-70">PPS RAHARJO SRAGEN</p>
+                        <p id="profile-name" class="font-black truncate uppercase">Admin </p>
+                        <p id="profile-role" class="text-sky-100 font-bold uppercase opacity-70">PPS RAHARJO SRAGEN</p>
                     </div>
                 </div>
                 <!-- Admin Links Container -->
@@ -772,7 +772,7 @@
                     <button onclick="showPage('restore-json')" id="menu-restore-json"
                         class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-bold text-white text-left">
                         <i data-lucide="database" class="w-3 h-3"></i>
-                        <span>Backup-Restore Database</span>
+                        <span>Restore Database (JSON)</span>
                     </button>
                     <button onclick="showPage('statistik-pengunjung')" id="menu-statistik-pengunjung"
                         class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-bold text-white text-left">
@@ -784,11 +784,11 @@
                         <i data-lucide="user-check" class="w-3 h-3"></i>
                         <span>Data Personal</span>
                     </a>
-                    <a href="https://gemini.google.com/share/7945ab24d3ac" target="_blank"
-                        class="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-bold text-white">
-                        <i data-lucide="user-check" class="w-3 h-3"></i>
-                        <span>Data 1</span>
-                    </a>
+                    <button onclick="showPage('apbd')" id="menu-apbd"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-bold text-white text-left">
+                        <i data-lucide="wallet" class="w-3 h-3"></i>
+                        <span>Monitoring APBD</span>
+                    </button>
                     <a href="data_personal.html" class="..."><i data-lucide="user-check" class="w-3 h-3"></i>
                         <span>Data 2++</span>
                     </a>

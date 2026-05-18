@@ -578,7 +578,7 @@
                                     <div className="font-bold text-slate-800 mb-0.5">{item.unitKerja}</div>
                                     <div className="flex items-center gap-2">
                                       <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">{item.jenisLaporan}</span>
-                                      <span className="text-[8px] text-slate-300">•</span>
+                                      <span className="text-[8px] text-slate-300">ï¿½</span>
                                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{item.subKategori}</span>
                                     </div>
                                   </td>
@@ -647,7 +647,7 @@
                                 </button>
                               </div>
                               <h3 className="font-black text-slate-800 text-xs mb-1">{item.unitKerja}</h3>
-                              <p className="text-[9px] font-bold text-slate-400 mb-3 uppercase tracking-widest">{item.subKategori} • {item.tahun}</p>
+                              <p className="text-[9px] font-bold text-slate-400 mb-3 uppercase tracking-widest">{item.subKategori} ï¿½ {item.tahun}</p>
 
                               {item.keterangan && (
                                 <div className="mb-4 p-3 bg-white rounded-xl border border-slate-100 flex-1">
@@ -703,6 +703,7 @@
                     type="password"
                     autoFocus
                     maxLength={3}
+                    autoComplete="new-password"
                     className={`w-full text-center text-3xl font-black tracking-[0.5em] py-4 bg-slate-100 rounded-2xl outline-none border-2 transition-all ${pinError ? 'border-red-400 animate-shake text-red-500' : 'border-transparent focus:border-emerald-500 focus:bg-white'}`}
                     value={pinInput}
                     onChange={(e) => { setPinInput(e.target.value); setPinError(false); }}

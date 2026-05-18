@@ -405,7 +405,7 @@
                     (surat.perihal || "").toLowerCase().includes(searchTerm.toLowerCase());
                 const matchesFilter = filterStatus === 'Semua' || surat.status === filterStatus;
                 return matchesSearch && matchesFilter;
-            });
+            }).sort((a, b) => (b.nomor_resmi || "").localeCompare(a.nomor_resmi || "", undefined, { numeric: true, sensitivity: 'base' }));
 
             const [activeTab, setActiveTab] = useState('input'); // 'input' or 'daftar'
 
@@ -445,9 +445,9 @@
                     </header>
 
                     {/* TAB NAVIGATION */}
-                    <div className="flex gap-2 mb-8 bg-slate-100 p-1 rounded-2xl w-fit mx-auto">
-                        <button onClick={() => setActiveTab('input')} className={`px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === 'input' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Input Pengajuan</button>
-                        <button onClick={() => setActiveTab('daftar')} className={`px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === 'daftar' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Daftar Pengajuan</button>
+                    <div className="flex gap-2 mb-8 bg-slate-200 p-1.5 rounded-2xl w-fit mx-auto shadow-inner">
+                        <button onClick={() => setActiveTab('input')} className={`px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === 'input' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-slate-300'}`}>Input Pengajuan</button>
+                        <button onClick={() => setActiveTab('daftar')} className={`px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === 'daftar' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-slate-300'}`}>Daftar Pengajuan</button>
                     </div>
 
                     {pinModal.show && (
@@ -465,7 +465,7 @@
                                     autoFocus 
                                     maxLength={3} 
                                     className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-600 outline-none p-5 rounded-3xl text-5xl font-black text-center tracking-[1.5rem] shadow-inner"
-                                    placeholder="···"
+                                    placeholder=""
                                     onChange={e => {
                                         if (e.target.value.length === 3) handlePinSubmit(e.target.value);
                                     }}

@@ -266,13 +266,15 @@
                   <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Sesuai Script Master</p>
                 </div>
                 <input type="password" autoFocus maxLength={3} value={pinInput}
-                  onChange={e => {
-                    const v = e.target.value; setPinInput(v);
-                    if (v.length === 3) setTimeout(() => handlePinSubmit(v), 100);
-                  }}
-                  className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-600 outline-none p-5 rounded-3xl text-5xl font-black text-center tracking-[1.5rem] shadow-inner"
-                  placeholder="···"
-                />
+                    onChange={e => {
+                        const val = e.target.value;
+                        setPinInput(val);
+                        if (val.length === 3) {
+                            setTimeout(() => handlePinSubmit(val), 100);
+                        }
+                    }}
+                    className="w-full text-center text-6xl font-black outline-none bg-slate-50 py-5 rounded-[2rem] tracking-[1.5rem] border-2 border-transparent focus:border-slate-950 shadow-inner"
+                    placeholder="···" />
                 <button onClick={() => setPinModal({ show: false })} className="text-[10px] font-black text-rose-500 uppercase hover:underline tracking-widest">Batalkan</button>
               </div>
             </div>
