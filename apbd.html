@@ -939,6 +939,59 @@ COMMIT;`;
             return { paguMurni, paguEfisiensi, paguPerubahan, realisasi, belumSP2D, monthly, foundDana, foundMetode, foundPelaksana };
         }
 
+        function calculateFilteredTotals(items, forceMatch = false) {
+            let murni = 0, efisiensi = 0, perubahan = 0, real = 0, belum = 0;
+            let monthly = Array(12).fill(0);
+
+            items.forEach(item => {
+                // Hierarchy filtering logic (pruning)
+                let skip = false;
+                if (state.filterHierarchy.program !== 'all' && item.type === 'program' && item.id !== state.filterHierarchy.program) skip = true;
+                if (state.filterHierarchy.kegiatan !== 'all' && item.type === 'kegiatan' && item.id !== state.filterHierarchy.kegiatan) skip = true;
+                if (state.filterHierarchy.sub_kegiatan !== 'all' && item.type === 'sub_kegiatan' && item.id !== state.filterHierarchy.sub_kegiatan) skip = true;
+                if (state.filterHierarchy.rekening !== 'all' && item.type === 'rekening' && item.id !== state.filterHierarchy.rekening) skip = true;
+
+                if (skip) return;
+
+                const itemMeetsText = !state.filterText || item.uraian.toLowerCase().includes(state.filterText) || item.kode.includes(state.filterText);
+                const currentForceMatch = forceMatch || itemMeetsText;
+
+                if (item.type === 'rekening') {
+                    const agg = getAggregatedData(item);
+                    const meetsDana = state.filterDana === 'all' || item.sumberDana === state.filterDana;
+                    const meetsMetode = state.filterMetode === 'all' || item.metodeBelanja === state.filterMetode;
+                    const meetsPelaksana = state.filterPelaksana === 'all' || (item.pelaksana || 'TU') === state.filterPelaksana;
+
+                    // If text filter is active, either this item matches OR a parent matched.
+                    // If property filters are active, this item must match them.
+                    // Special case: if no children match text but this item does, it matches.
+                    // But if this item doesn't match text, it might still match if a child matches (for parents).
+                    // For leaf nodes (rekening), it matches if (parentMatched OR selfMatchesText) AND propertyFiltersMatch.
+                    
+                    if (currentForceMatch && meetsDana && meetsMetode && meetsPelaksana) {
+                        murni += agg.paguMurni;
+                        efisiensi += agg.paguEfisiensi;
+                        perubahan += agg.paguPerubahan;
+                        real += agg.realisasi;
+                        belum += agg.belumSP2D;
+                        agg.monthly.forEach((v, i) => monthly[i] += v);
+                    }
+                } else if (item.children) {
+                    // Check if any child matches text filter (to handle the case where parent doesn't match but child does)
+                    // Actually, if we just recurse, the child will detect its own match.
+                    const sub = calculateFilteredTotals(item.children, currentForceMatch);
+                    murni += sub.murni;
+                    efisiensi += sub.efisiensi;
+                    perubahan += sub.perubahan;
+                    real += sub.real;
+                    belum += sub.belum;
+                    sub.monthly.forEach((v, i) => monthly[i] += v);
+                }
+            });
+
+            return { murni, efisiensi, perubahan, real, belum, monthly };
+        }
+
         // --- RENDER LOGIC ---
         function render(force = false) {
             renderHeaderStats();
@@ -968,31 +1021,17 @@ COMMIT;`;
 
             // Filter Summary
             const summary = document.getElementById('filter-summary');
-            if (state.filterText || state.filterDana !== 'all' || state.filterMetode !== 'all' || state.filterPelaksana !== 'all' || state.filterLevel !== 'all') {
+            const hasHierarchyFilter = state.filterHierarchy.program !== 'all' || state.filterHierarchy.kegiatan !== 'all' || state.filterHierarchy.sub_kegiatan !== 'all' || state.filterHierarchy.rekening !== 'all';
+            
+            if (state.filterText || state.filterDana !== 'all' || state.filterMetode !== 'all' || state.filterPelaksana !== 'all' || state.filterLevel !== 'all' || hasHierarchyFilter) {
                 summary.classList.remove('hidden');
                 summary.classList.add('grid');
                 
-                let filteredMurni = 0, filteredEfisiensi = 0, filteredPerubahan = 0, filteredReal = 0;
-                
-                const processFiltered = (items) => {
-                    items.forEach(item => {
-                        const agg = getAggregatedData(item);
-                        const meetsText = !state.filterText || item.uraian.toLowerCase().includes(state.filterText) || item.kode.includes(state.filterText);
-                        const meetsDana = state.filterDana === 'all' || agg.foundDana.has(state.filterDana);
-                        const meetsMetode = state.filterMetode === 'all' || agg.foundMetode.has(state.filterMetode);
-                        const meetsPelaksana = state.filterPelaksana === 'all' || agg.foundPelaksana.has(state.filterPelaksana);
-                        
-                        if (meetsText && meetsDana && meetsMetode && meetsPelaksana) {
-                            filteredMurni += agg.paguMurni;
-                            filteredEfisiensi += agg.paguEfisiensi;
-                            filteredPerubahan += agg.paguPerubahan;
-                            filteredReal += agg.realisasi;
-                        } else if (item.children) {
-                            processFiltered(item.children);
-                        }
-                    });
-                };
-                processFiltered(state.data.pagu);
+                const filtered = calculateFilteredTotals(state.data.pagu);
+                const filteredMurni = filtered.murni;
+                const filteredEfisiensi = filtered.efisiensi;
+                const filteredPerubahan = filtered.perubahan;
+                const filteredReal = filtered.real;
 
                 let activeFilteredPagu = 0;
                 if (state.viewMode === 'murni') activeFilteredPagu = filteredMurni;
@@ -1180,34 +1219,14 @@ COMMIT;`;
             const body = document.getElementById('table-body');
             const borderColor = 'border-white/60';
             
-            let totalMurni = 0, totalEfisiensi = 0, totalPerubahan = 0, totalReal = 0, totalBelum = 0;
-            let totalMonthly = Array(12).fill(0);
-
             // Calculate totals based on current filters
-            const processFiltered = (items) => {
-                items.forEach(item => {
-                    const agg = getAggregatedData(item);
-                    const meetsText = !state.filterText || item.uraian.toLowerCase().includes(state.filterText) || item.kode.includes(state.filterText);
-                    const meetsDana = state.filterDana === 'all' || agg.foundDana.has(state.filterDana);
-                    const meetsMetode = state.filterMetode === 'all' || agg.foundMetode.has(state.filterMetode);
-                    const meetsPelaksana = state.filterPelaksana === 'all' || agg.foundPelaksana.has(state.filterPelaksana);
-                    
-                    let meetsHierarchy = true;
-                    if (state.filterHierarchy.program !== 'all' && item.type === 'program' && item.id !== state.filterHierarchy.program) meetsHierarchy = false;
-                    
-                    if (meetsText && meetsDana && meetsMetode && meetsPelaksana && meetsHierarchy) {
-                        totalMurni += agg.paguMurni;
-                        totalEfisiensi += agg.paguEfisiensi;
-                        totalPerubahan += agg.paguPerubahan;
-                        totalReal += agg.realisasi;
-                        totalBelum += agg.belumSP2D;
-                        agg.monthly.forEach((v, i) => totalMonthly[i] += v);
-                    } else if (item.children) {
-                        processFiltered(item.children);
-                    }
-                });
-            };
-            processFiltered(state.data.pagu);
+            const filtered = calculateFilteredTotals(state.data.pagu);
+            const totalMurni = filtered.murni;
+            const totalEfisiensi = filtered.efisiensi;
+            const totalPerubahan = filtered.perubahan;
+            const totalReal = filtered.real;
+            const totalBelum = filtered.belum;
+            const totalMonthly = filtered.monthly;
 
             let activeTotalPagu = state.viewMode === 'murni' ? totalMurni : (state.viewMode === 'efisiensi' ? totalEfisiensi : totalPerubahan);
             const totalSisa = activeTotalPagu - totalReal;
