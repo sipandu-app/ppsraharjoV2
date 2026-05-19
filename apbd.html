@@ -161,7 +161,15 @@
                             <option value="SWAKELOLA">SWAKELOLA</option>
                             <option value="LANGSUNG">LANGSUNG</option>
                             <option value="DIKECUALIKAN">DIKECUALIKAN</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 border-l pl-2 border-slate-100">
+                        <span class="text-[6px] font-black text-slate-400 uppercase">Metode 2:</span>
+                        <select id="filter-metode2" onchange="handleFilterChange()" class="bg-transparent text-[8px] font-black outline-none appearance-none cursor-pointer pr-1">
+                            <option value="all">SEMUA</option>
                             <option value="PENYEDIA_SWAKELOLA">PENYEDIA DLM SWAKELOLA</option>
+                            <option value="TIDAK_ADA">N/A</option>
                         </select>
                     </div>
 
@@ -272,10 +280,17 @@
         // --- CONFIGURATION ---
         const SUPABASE_URL = "https://yewkffbatvrbtfliikia.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_gh_LzjznODmbTtMBzt5aaA_sFTDMykg";
-        const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const appId = 'SIPD_PAGU_ADVANCED_v2';
-
-        const PIN_OTORITAS = "888";
+        let supa = null;
+        try {
+            if (typeof supabase !== 'undefined') {
+                supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+             console.error("[APBD] Supabase early init failed:", e);
+         }
+         const appId = 'SIPD_PAGU_ADVANCED_v2';
+  
+         const PIN_OTORITAS = "888";
         const BULAN_LIST = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
         const SUMBER_DANA = [
@@ -286,10 +301,14 @@
         ];
 
         const METODE_BELANJA = [
-            { id: 'EPURCHASING', label: 'E-Purchasing', color: 'bg-blue-600 text-white', icon: 'shopping-cart' },
-            { id: 'SWAKELOLA', label: 'Swakelola', color: 'bg-purple-600 text-white', icon: 'users' },
-            { id: 'LANGSUNG', label: 'Belanja Langsung', color: 'bg-rose-600 text-white', icon: 'hand-coins' },
-            { id: 'DIKECUALIKAN', label: 'Pengadaan Dikecualikan', color: 'bg-orange-500 text-white', icon: 'shield-check' },
+            { id: 'EPURCHASING', label: 'E-PURCH', color: 'bg-blue-600 text-white', icon: 'shopping-cart' },
+            { id: 'SWAKELOLA', label: 'SWAKELOLA', color: 'bg-purple-600 text-white', icon: 'users' },
+            { id: 'LANGSUNG', label: 'LANGSUNG', color: 'bg-rose-600 text-white', icon: 'hand-coins' },
+            { id: 'DIKECUALIKAN', label: 'DIKECUALIKAN', color: 'bg-orange-500 text-white', icon: 'shield-check' },
+            { id: 'TIDAK_ADA', label: 'N/A', color: 'bg-slate-200 text-slate-500', icon: 'x' }
+        ];
+
+        const METODE_BELANJA_2 = [
             { id: 'PENYEDIA_SWAKELOLA', label: 'Penyedia Dalam Swakelola', color: 'bg-violet-500 text-white', icon: 'user-cog' },
             { id: 'TIDAK_ADA', label: 'N/A', color: 'bg-slate-200 text-slate-500', icon: 'x' }
         ];
@@ -316,6 +335,7 @@
             filterText: '',
             filterDana: 'all',
             filterMetode: 'all',
+            filterMetode2: 'all',
             filterPelaksana: 'all',
             filterLevel: 'all',
             filterHierarchy: { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' },
@@ -326,12 +346,23 @@
             isModeLocked: localStorage.getItem(`${appId}_isModeLocked`) === 'true',
             bulkRealisasi: [],
             pendingAction: null,
-            paguForm: { id: '', type: 'program', kode: '', uraian: '', paguMurni: '', paguPerubahan: '', sumberDana: 'DAU', metodeBelanja: 'TIDAK_ADA', pelaksana: 'TU', parentId: null },
+            paguForm: { id: '', type: 'program', kode: '', uraian: '', paguMurni: '', paguPerubahan: '', sumberDana: 'DAU', metodeBelanja: 'TIDAK_ADA', metodeBelanja2: 'TIDAK_ADA', pelaksana: 'TU', parentId: null },
             hiddenMonths: new Set(), // Bulan yang disembunyikan
             showPercentages: true, // Menampilkan prosentase
             hiddenCols: new Set(), // Kolom rekap yang disembunyikan
             editingId: null // Melacak rekening yang sedang diedit manual
         };
+
+        function checkIsFiltering() {
+            const hasSearch = !!state.filterText;
+            const hasDana = state.filterDana !== 'all';
+            const hasMetode = state.filterMetode !== 'all';
+            const hasMetode2 = state.filterMetode2 !== 'all';
+            const hasPelaksana = state.filterPelaksana !== 'all';
+            const hasLevel = state.filterLevel !== 'all';
+            const hasHierarchy = state.filterHierarchy.program !== 'all' || state.filterHierarchy.kegiatan !== 'all' || state.filterHierarchy.sub_kegiatan !== 'all' || state.filterHierarchy.rekening !== 'all';
+            return hasSearch || hasDana || hasMetode || hasMetode2 || hasPelaksana || hasLevel || hasHierarchy;
+        }
 
         // --- UTILS ---
         const formatRupiah = (num) => {
@@ -361,15 +392,41 @@
         // --- CORE DATABASE FUNCTIONS ---
         async function init() {
             try {
+                console.log("[APBD] Initializing database connection...");
+                
+                // Wait for supabase to be defined (max 5 seconds)
+                let retries = 0;
+                while (typeof supabase === 'undefined' && retries < 10) {
+                    console.log("[APBD] Waiting for Supabase library... " + (retries + 1));
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    retries++;
+                }
+
+                if (typeof supabase === 'undefined') {
+                    throw new Error("Library Supabase tidak terdeteksi. Silakan periksa koneksi internet dan muat ulang halaman.");
+                }
+
+                if (!supa) {
+                    console.log("[APBD] Creating Supabase client...");
+                    supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+
                 const { data, error } = await supa
                     .from('sipd_main_document')
                     .select('*')
                     .eq('app_id', appId)
                     .maybeSingle();
 
-                if (error) throw error;
+                if (error) {
+                    console.error("[APBD] Database Fetch Error:", error);
+                    if (error.code === '42P01') {
+                        throw new Error("Tabel 'sipd_main_document' belum dibuat di database Supabase.");
+                    }
+                    throw new Error("Gagal mengambil data: " + error.message);
+                }
 
                 if (data) {
+                    console.log("[APBD] Data loaded successfully");
                     state.data = {
                         pagu: data.pagu || [],
                         realisasi: data.realisasi || [],
@@ -380,17 +437,30 @@
                     updateHierarchyOptions();
                     updateModeUI();
                 } else {
+                    console.log("[APBD] No data found, creating new entry...");
                     await saveToSupabase({ pagu: [], realisasi: [], backups: [] });
                 }
                 render();
             } catch (err) {
-                console.error("Init Error:", err);
-                showNotif("Gagal memuat data dari database", "error");
+                console.error("[APBD] Initialization failed:", err);
+                const errorMsg = err.message || "Gagal memuat data dari database";
+                showNotif(errorMsg, "error");
+                
+                // Provide a manual retry in console for developers
+                window.retryInit = init;
+                console.log("Ketik 'retryInit()' untuk mencoba ulang koneksi database.");
+
+                // Fallback to local rendering
+                render();
             }
         }
 
         async function saveToSupabase(newData) {
             try {
+                if (!supa) {
+                    throw new Error("Koneksi database belum terinisialisasi.");
+                }
+
                 // Update local state first for instant UI feedback
                 state.data = newData;
                 
@@ -409,7 +479,7 @@
                 updateBackupBadge();
             } catch (err) {
                 console.error("Save Error:", err);
-                showNotif("Gagal menyimpan ke Cloud", "error");
+                showNotif("Gagal menyimpan ke Cloud: " + (err.message || "Error tidak dikenal"), "error");
             }
         }
 
@@ -562,6 +632,7 @@
             state.filterText = document.getElementById('search-input').value.toLowerCase();
             state.filterDana = document.getElementById('filter-dana').value;
             state.filterMetode = document.getElementById('filter-metode').value;
+            state.filterMetode2 = document.getElementById('filter-metode2').value;
             state.filterPelaksana = document.getElementById('filter-pelaksana').value;
             checkResetButton();
             render();
@@ -571,10 +642,12 @@
             document.getElementById('search-input').value = '';
             document.getElementById('filter-dana').value = 'all';
             document.getElementById('filter-metode').value = 'all';
+            document.getElementById('filter-metode2').value = 'all';
             document.getElementById('filter-pelaksana').value = 'all';
             state.filterText = '';
             state.filterDana = 'all';
             state.filterMetode = 'all';
+            state.filterMetode2 = 'all';
             state.filterPelaksana = 'all';
             state.filterLevel = 'all';
             state.filterHierarchy = { program: 'all', kegiatan: 'all', sub_kegiatan: 'all', rekening: 'all' };
@@ -587,14 +660,7 @@
 
         function checkResetButton() {
             const resetBtn = document.getElementById('reset-filter-btn');
-            const hasHierarchyFilter = state.filterHierarchy.program !== 'all' || state.filterHierarchy.kegiatan !== 'all' || state.filterHierarchy.sub_kegiatan !== 'all' || state.filterHierarchy.rekening !== 'all';
-            const hasSearch = !!state.filterText;
-            const hasDana = state.filterDana !== 'all';
-            const hasMetode = state.filterMetode !== 'all';
-            const hasPelaksana = state.filterPelaksana !== 'all';
-            const hasLevel = state.filterLevel !== 'all';
-
-            if (hasSearch || hasDana || hasMetode || hasPelaksana || hasLevel || hasHierarchyFilter) {
+            if (checkIsFiltering()) {
                 resetBtn.classList.remove('hidden');
             } else {
                 resetBtn.classList.add('hidden');
@@ -904,10 +970,12 @@ COMMIT;`;
 
             let foundDana = new Set();
             let foundMetode = new Set();
+            let foundMetode2 = new Set();
             let foundPelaksana = new Set();
             if (item.type === 'rekening') {
                 foundDana.add(item.sumberDana || 'DAU');
                 foundMetode.add(item.metodeBelanja || 'TIDAK_ADA');
+                foundMetode2.add(item.metodeBelanja2 || 'TIDAK_ADA');
                 foundPelaksana.add(item.pelaksana || 'TU');
             }
 
@@ -925,6 +993,7 @@ COMMIT;`;
                     childData.monthly.forEach((v, i) => sumMonthly[i] += v);
                     childData.foundDana.forEach(d => foundDana.add(d));
                     childData.foundMetode.forEach(m => foundMetode.add(m));
+                    childData.foundMetode2.forEach(m2 => foundMetode2.add(m2));
                     childData.foundPelaksana.forEach(p => foundPelaksana.add(p));
                 });
 
@@ -936,12 +1005,16 @@ COMMIT;`;
                 monthly = sumMonthly;
             }
 
-            return { paguMurni, paguEfisiensi, paguPerubahan, realisasi, belumSP2D, monthly, foundDana, foundMetode, foundPelaksana };
+            return { paguMurni, paguEfisiensi, paguPerubahan, realisasi, belumSP2D, monthly, foundDana, foundMetode, foundMetode2, foundPelaksana };
         }
 
         function calculateFilteredTotals(items, forceMatch = false) {
             let murni = 0, efisiensi = 0, perubahan = 0, real = 0, belum = 0;
             let monthly = Array(12).fill(0);
+            let foundDana = new Set();
+            let foundMetode = new Set();
+            let foundMetode2 = new Set();
+            let foundPelaksana = new Set();
 
             items.forEach(item => {
                 // Hierarchy filtering logic (pruning)
@@ -960,36 +1033,48 @@ COMMIT;`;
                     const agg = getAggregatedData(item);
                     const meetsDana = state.filterDana === 'all' || item.sumberDana === state.filterDana;
                     const meetsMetode = state.filterMetode === 'all' || item.metodeBelanja === state.filterMetode;
+                    const meetsMetode2 = state.filterMetode2 === 'all' || (item.metodeBelanja2 || 'TIDAK_ADA') === state.filterMetode2;
                     const meetsPelaksana = state.filterPelaksana === 'all' || (item.pelaksana || 'TU') === state.filterPelaksana;
-
-                    // If text filter is active, either this item matches OR a parent matched.
-                    // If property filters are active, this item must match them.
-                    // Special case: if no children match text but this item does, it matches.
-                    // But if this item doesn't match text, it might still match if a child matches (for parents).
-                    // For leaf nodes (rekening), it matches if (parentMatched OR selfMatchesText) AND propertyFiltersMatch.
                     
-                    if (currentForceMatch && meetsDana && meetsMetode && meetsPelaksana) {
+                    if (currentForceMatch && meetsDana && meetsMetode && meetsMetode2 && meetsPelaksana) {
                         murni += agg.paguMurni;
                         efisiensi += agg.paguEfisiensi;
                         perubahan += agg.paguPerubahan;
                         real += agg.realisasi;
                         belum += agg.belumSP2D;
                         agg.monthly.forEach((v, i) => monthly[i] += v);
+                        foundDana.add(item.sumberDana || 'DAU');
+                        foundMetode.add(item.metodeBelanja || 'TIDAK_ADA');
+                        foundMetode2.add(item.metodeBelanja2 || 'TIDAK_ADA');
+                        foundPelaksana.add(item.pelaksana || 'TU');
                     }
                 } else if (item.children) {
-                    // Check if any child matches text filter (to handle the case where parent doesn't match but child does)
-                    // Actually, if we just recurse, the child will detect its own match.
                     const sub = calculateFilteredTotals(item.children, currentForceMatch);
-                    murni += sub.murni;
-                    efisiensi += sub.efisiensi;
-                    perubahan += sub.perubahan;
-                    real += sub.real;
-                    belum += sub.belum;
+                    murni += sub.paguMurni;
+                    efisiensi += sub.paguEfisiensi;
+                    perubahan += sub.paguPerubahan;
+                    real += sub.realisasi;
+                    belum += sub.belumSP2D;
                     sub.monthly.forEach((v, i) => monthly[i] += v);
+                    sub.foundDana.forEach(d => foundDana.add(d));
+                    sub.foundMetode.forEach(m => foundMetode.add(m));
+                    sub.foundMetode2.forEach(m2 => foundMetode2.add(m2));
+                    sub.foundPelaksana.forEach(p => foundPelaksana.add(p));
                 }
             });
 
-            return { murni, efisiensi, perubahan, real, belum, monthly };
+            return { 
+                paguMurni: murni, 
+                paguEfisiensi: efisiensi, 
+                paguPerubahan: perubahan, 
+                realisasi: real, 
+                belumSP2D: belum, 
+                monthly, 
+                foundDana, 
+                foundMetode, 
+                foundMetode2,
+                foundPelaksana 
+            };
         }
 
         // --- RENDER LOGIC ---
@@ -1002,46 +1087,45 @@ COMMIT;`;
         }
 
         function renderHeaderStats() {
-            let globalMurni = 0, globalEfisiensi = 0, globalPerubahan = 0, globalReal = 0;
-            state.data.pagu.forEach(p => {
-                const agg = getAggregatedData(p);
-                globalMurni += agg.paguMurni;
-                globalEfisiensi += agg.paguEfisiensi;
-                globalPerubahan += agg.paguPerubahan;
-                globalReal += agg.realisasi;
-            });
+            const isFiltering = checkIsFiltering();
+            
+            let murni = 0, efisiensi = 0, perubahan = 0, real = 0;
+            
+            if (isFiltering) {
+                const filtered = calculateFilteredTotals(state.data.pagu);
+                murni = filtered.paguMurni;
+                efisiensi = filtered.paguEfisiensi;
+                perubahan = filtered.paguPerubahan;
+                real = filtered.realisasi;
+            } else {
+                state.data.pagu.forEach(p => {
+                    const agg = getAggregatedData(p);
+                    murni += agg.paguMurni;
+                    efisiensi += agg.paguEfisiensi;
+                    perubahan += agg.paguPerubahan;
+                    real += agg.realisasi;
+                });
+            }
 
             let activePagu = 0;
-            if (state.viewMode === 'murni') activePagu = globalMurni;
-            else if (state.viewMode === 'efisiensi') activePagu = globalEfisiensi;
-            else activePagu = globalPerubahan;
+            if (state.viewMode === 'murni') activePagu = murni;
+            else if (state.viewMode === 'efisiensi') activePagu = efisiensi;
+            else activePagu = perubahan;
 
             document.getElementById('global-pagu').innerText = `Rp ${formatRupiah(activePagu)}`;
-            document.getElementById('global-sisa').innerText = `Rp ${formatRupiah(activePagu - globalReal)}`;
+            document.getElementById('global-sisa').innerText = `Rp ${formatRupiah(activePagu - real)}`;
 
             // Filter Summary
             const summary = document.getElementById('filter-summary');
-            const hasHierarchyFilter = state.filterHierarchy.program !== 'all' || state.filterHierarchy.kegiatan !== 'all' || state.filterHierarchy.sub_kegiatan !== 'all' || state.filterHierarchy.rekening !== 'all';
             
-            if (state.filterText || state.filterDana !== 'all' || state.filterMetode !== 'all' || state.filterPelaksana !== 'all' || state.filterLevel !== 'all' || hasHierarchyFilter) {
+            if (isFiltering) {
                 summary.classList.remove('hidden');
                 summary.classList.add('grid');
                 
-                const filtered = calculateFilteredTotals(state.data.pagu);
-                const filteredMurni = filtered.murni;
-                const filteredEfisiensi = filtered.efisiensi;
-                const filteredPerubahan = filtered.perubahan;
-                const filteredReal = filtered.real;
-
-                let activeFilteredPagu = 0;
-                if (state.viewMode === 'murni') activeFilteredPagu = filteredMurni;
-                else if (state.viewMode === 'efisiensi') activeFilteredPagu = filteredEfisiensi;
-                else activeFilteredPagu = filteredPerubahan;
-
                 document.getElementById('filter-pagu-label').innerText = `Filter: Pagu ${state.viewMode.toUpperCase()}`;
-                document.getElementById('filtered-pagu').innerText = `Rp ${formatRupiah(activeFilteredPagu)}`;
-                document.getElementById('filtered-real').innerText = `Rp ${formatRupiah(filteredReal)}`;
-                document.getElementById('filtered-sisa').innerText = `Rp ${formatRupiah(activeFilteredPagu - filteredReal)}`;
+                document.getElementById('filtered-pagu').innerText = `Rp ${formatRupiah(activePagu)}`;
+                document.getElementById('filtered-real').innerText = `Rp ${formatRupiah(real)}`;
+                document.getElementById('filtered-sisa').innerText = `Rp ${formatRupiah(activePagu - real)}`;
             } else {
                 summary.classList.add('hidden');
                 summary.classList.remove('grid');
@@ -1202,6 +1286,12 @@ COMMIT;`;
                     <th class="px-2 py-2.5 text-right w-[80px] bg-slate-800 text-amber-400 border-r border-b ${borderColor}">Sisa Pagu</th>
                 `;
             }
+            
+            // Tambahkan kolom Aksi jika bukan tab rekap
+            if (state.activeTab !== 'rekap') {
+                headHtml += `<th class="px-2 py-2.5 text-center w-[100px] bg-slate-900 text-amber-400 border-b ${borderColor}">Aksi</th>`;
+            }
+
             headHtml += `</tr>`;
             head.innerHTML = headHtml;
 
@@ -1221,11 +1311,11 @@ COMMIT;`;
             
             // Calculate totals based on current filters
             const filtered = calculateFilteredTotals(state.data.pagu);
-            const totalMurni = filtered.murni;
-            const totalEfisiensi = filtered.efisiensi;
-            const totalPerubahan = filtered.perubahan;
-            const totalReal = filtered.real;
-            const totalBelum = filtered.belum;
+            const totalMurni = filtered.paguMurni;
+            const totalEfisiensi = filtered.paguEfisiensi;
+            const totalPerubahan = filtered.paguPerubahan;
+            const totalReal = filtered.realisasi;
+            const totalBelum = filtered.belumSP2D;
             const totalMonthly = filtered.monthly;
 
             let activeTotalPagu = state.viewMode === 'murni' ? totalMurni : (state.viewMode === 'efisiensi' ? totalEfisiensi : totalPerubahan);
@@ -1343,6 +1433,11 @@ COMMIT;`;
                     </td>
                 `;
             }
+            
+            // Tambahkan cell kosong untuk TOTAL di kolom Aksi
+            if (state.activeTab !== 'rekap') {
+                html += `<td class="px-2 py-1 border-b ${borderColor} bg-slate-800"></td>`;
+            }
 
             row.innerHTML = html;
             body.appendChild(row);
@@ -1352,8 +1447,10 @@ COMMIT;`;
             const body = document.getElementById('table-body');
             const borderColor = 'border-white/60';
             
+            const isFiltering = checkIsFiltering();
+
             items.forEach(item => {
-                const agg = getAggregatedData(item);
+                const agg = isFiltering ? calculateFilteredTotals([item]) : getAggregatedData(item);
                 const isExpanded = state.expandedItems[item.id] || 
                                    state.filterLevel !== 'all' || 
                                    state.filterText || 
@@ -1365,6 +1462,7 @@ COMMIT;`;
                 const meetsText = !state.filterText || item.uraian.toLowerCase().includes(state.filterText) || item.kode.includes(state.filterText);
                 const meetsDana = state.filterDana === 'all' || agg.foundDana.has(state.filterDana);
                 const meetsMetode = state.filterMetode === 'all' || agg.foundMetode.has(state.filterMetode);
+                const meetsMetode2 = state.filterMetode2 === 'all' || agg.foundMetode2.has(state.filterMetode2);
                 const meetsPelaksana = state.filterPelaksana === 'all' || agg.foundPelaksana.has(state.filterPelaksana);
                 
                 let meetsHierarchy = true;
@@ -1386,6 +1484,7 @@ COMMIT;`;
                     const subMeetsText = !state.filterText || c.uraian.toLowerCase().includes(state.filterText) || c.kode.includes(state.filterText);
                     const subMeetsDana = state.filterDana === 'all' || subAgg.foundDana.has(state.filterDana);
                     const subMeetsMetode = state.filterMetode === 'all' || subAgg.foundMetode.has(state.filterMetode);
+                    const subMeetsMetode2 = state.filterMetode2 === 'all' || subAgg.foundMetode2.has(state.filterMetode2);
                     const subMeetsPelaksana = state.filterPelaksana === 'all' || subAgg.foundPelaksana.has(state.filterPelaksana);
                     
                     let subMeetsHierarchy = true;
@@ -1394,10 +1493,10 @@ COMMIT;`;
                     if (state.filterHierarchy.sub_kegiatan !== 'all' && c.type === 'sub_kegiatan' && c.id !== state.filterHierarchy.sub_kegiatan) subMeetsHierarchy = false;
                     if (state.filterHierarchy.rekening !== 'all' && c.type === 'rekening' && c.id !== state.filterHierarchy.rekening) subMeetsHierarchy = false;
 
-                    return (subMeetsText && subMeetsDana && subMeetsMetode && subMeetsPelaksana && subMeetsHierarchy) || hasMatchingChild(c.children);
+                    return (subMeetsText && subMeetsDana && subMeetsMetode && subMeetsMetode2 && subMeetsPelaksana && subMeetsHierarchy) || hasMatchingChild(c.children);
                 });
 
-                const isVisible = meetsHierarchy && ((meetsText && meetsDana && meetsMetode && meetsPelaksana) || hasMatchingChild(item.children));
+                const isVisible = meetsHierarchy && ((meetsText && meetsDana && meetsMetode && meetsMetode2 && meetsPelaksana) || hasMatchingChild(item.children));
                 
                 let activePagu = 0;
                 if (state.viewMode === 'murni') activePagu = agg.paguMurni;
@@ -1405,8 +1504,6 @@ COMMIT;`;
                 else activePagu = agg.paguPerubahan;
 
                 // Logika Visibilitas:
-                const isFiltering = state.filterText || state.filterDana !== 'all' || state.filterMetode !== 'all' || state.filterPelaksana !== 'all' || state.filterLevel !== 'all' || state.filterHierarchy.program !== 'all';
-                
                 if (isFiltering) {
                     if (!isVisible) return;
                 } else {
@@ -1456,23 +1553,25 @@ COMMIT;`;
                                 <span class="uppercase text-[10px] font-black leading-tight tracking-tight">${item.uraian}</span>
                                 <div class="flex items-center gap-2 mt-1">
                                     ${item.type === 'rekening' ? `
-                                        <span class="${SUMBER_DANA.find(s => s.id === item.sumberDana).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${item.sumberDana}</span>
-                                        <span class="${METODE_BELANJA.find(m => m.id === item.metodeBelanja).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${METODE_BELANJA.find(m => m.id === item.metodeBelanja).label}</span>
-                                        <span class="${PELAKSANA.find(p => p.id === (item.pelaksana || 'TU')).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${PELAKSANA.find(p => p.id === (item.pelaksana || 'TU')).label}</span>
+                                        <span class="${(SUMBER_DANA.find(s => s.id === item.sumberDana) || SUMBER_DANA[0]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${item.sumberDana || 'DAU'}</span>
+                                        <span class="${(METODE_BELANJA.find(m => m.id === item.metodeBelanja) || METODE_BELANJA[4]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${(METODE_BELANJA.find(m => m.id === item.metodeBelanja) || METODE_BELANJA[4]).label}</span>
+                                        ${item.metodeBelanja2 && item.metodeBelanja2 !== 'TIDAK_ADA' ? `<span class="${(METODE_BELANJA_2.find(m => m.id === item.metodeBelanja2) || METODE_BELANJA_2[1]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${(METODE_BELANJA_2.find(m => m.id === item.metodeBelanja2) || METODE_BELANJA_2[1]).label}</span>` : ''}
+                                        <span class="${(PELAKSANA.find(p => p.id === (item.pelaksana || 'TU')) || PELAKSANA[0]).color} text-[6px] px-1.5 py-0.5 rounded font-black uppercase shadow-sm">${(PELAKSANA.find(p => p.id === (item.pelaksana || 'TU')) || PELAKSANA[0]).label}</span>
                                     ` : `
                                         ${Array.from(agg.foundDana).map(dId => `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold">${dId}</span>`).join('')}
-                                        ${Array.from(agg.foundPelaksana).map(pId => `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold ml-1">${PELAKSANA.find(p => p.id === pId).label}</span>`).join('')}
+                                        ${Array.from(agg.foundMetode).filter(m => m !== 'TIDAK_ADA').map(mId => {
+                                            const m = METODE_BELANJA.find(m => m.id === mId);
+                                            return m ? `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold ml-1">${m.label}</span>` : '';
+                                        }).join('')}
+                                        ${Array.from(agg.foundMetode2).filter(m2 => m2 !== 'TIDAK_ADA').map(m2Id => {
+                                            const m2 = METODE_BELANJA_2.find(m => m.id === m2Id);
+                                            return m2 ? `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold ml-1">${m2.label}</span>` : '';
+                                        }).join('')}
+                                        ${Array.from(agg.foundPelaksana).map(pId => {
+                                            const p = PELAKSANA.find(p => p.id === pId);
+                                            return p ? `<span class="bg-white/10 text-white/40 text-[5px] px-1 py-0.5 rounded uppercase font-bold ml-1">${p.label}</span>` : '';
+                                        }).join('')}
                                     `}
-                                </div>
-                                <div class="flex gap-2 mt-1.5 transition-opacity">
-                                    ${state.activeTab === 'pagu' && item.type !== 'rekening' ? `<button onclick="openAddSubModal('${item.id}', '${item.type}')" class="text-[7px] font-black bg-white/20 px-1.5 py-0.5 rounded uppercase hover:bg-white/40">+ Sub</button>` : ''}
-                                    ${state.activeTab === 'pagu' ? `
-                                        <button onclick="openEditModal('${item.id}')" class="text-[7px] font-black bg-white/10 px-1.5 py-0.5 rounded uppercase hover:bg-white/40">Edit</button>
-                                        <button onclick="confirmDelete('${item.id}')" class="text-[7px] font-black bg-red-500/30 px-1.5 py-0.5 rounded uppercase hover:bg-red-500/50">Hapus</button>
-                                    ` : ''}
-                                    ${state.activeTab === 'realisasi' && item.type === 'rekening' ? `
-                                        <button onclick="openRealisasiModal('${item.id}')" class="text-[8px] font-black bg-white text-black px-2 py-0.5 rounded-full uppercase flex items-center gap-1.5 shadow-lg border border-slate-200 hover:scale-105 transition-all"><i data-lucide="receipt" class="w-2.5 h-2.5"></i> Transaksi</button>
-                                    ` : ''}
                                 </div>
                             </div>
                         </td>
@@ -1586,6 +1685,24 @@ COMMIT;`;
                                 <div class="flex flex-col items-end">
                                     <span class="font-mono text-[11px] font-black ${sisa < 0 ? 'text-white' : 'text-yellow-200'}">${sisa.toLocaleString('id-ID')}</span>
                                     ${state.showPercentages ? `<span class="text-[6px] font-black px-1 rounded bg-white text-black/80 shadow-sm uppercase">${pctSisa}%</span>` : ''}
+                                </div>
+                            </td>
+                        `;
+                    }
+                    
+                    // Tambahkan kolom Aksi di akhir baris jika bukan tab rekap
+                    if (state.activeTab !== 'rekap') {
+                        html += `
+                            <td class="px-2 py-1.5 border-b ${borderColor} align-middle">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    ${state.activeTab === 'pagu' && item.type !== 'rekening' ? `<button onclick="openAddSubModal('${item.id}', '${item.type}')" title="Tambah Sub" class="p-1.5 bg-white/20 rounded-lg hover:bg-white/40 transition-all"><i data-lucide="plus" class="w-3 h-3"></i></button>` : ''}
+                                    ${state.activeTab === 'pagu' ? `
+                                        <button onclick="openEditModal('${item.id}')" title="Edit" class="p-1.5 bg-white/10 rounded-lg hover:bg-white/40 transition-all"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
+                                        <button onclick="confirmDelete('${item.id}')" title="Hapus" class="p-1.5 bg-red-500/30 rounded-lg hover:bg-red-500/50 transition-all"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                    ` : ''}
+                                    ${state.activeTab === 'realisasi' && item.type === 'rekening' ? `
+                                        <button onclick="openRealisasiModal('${item.id}')" title="Transaksi" class="px-2 py-1 bg-white text-black rounded-lg font-black text-[7px] uppercase flex items-center gap-1 hover:scale-105 transition-all shadow-sm"><i data-lucide="receipt" class="w-2.5 h-2.5"></i> Transaksi</button>
+                                    ` : ''}
                                 </div>
                             </td>
                         `;
@@ -1844,11 +1961,17 @@ COMMIT;`;
                             </div>
                         </div>
                         ${state.paguForm.type === 'rekening' ? `
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                                 <div class="flex flex-col gap-2">
                                     <label class="text-[9px] font-black text-slate-400 uppercase ml-3">Metode Belanja</label>
                                     <select id="f-metode" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-bold text-sm outline-none">
                                         ${METODE_BELANJA.map(m => `<option value="${m.id}" ${state.paguForm.metodeBelanja === m.id ? 'selected' : ''}>${m.label}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-[9px] font-black text-slate-400 uppercase ml-3">Metode Belanja 2</label>
+                                    <select id="f-metode2" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-bold text-sm outline-none">
+                                        ${METODE_BELANJA_2.map(m => `<option value="${m.id}" ${state.paguForm.metodeBelanja2 === m.id ? 'selected' : ''}>${m.label}</option>`).join('')}
                                     </select>
                                 </div>
                                 <div class="flex flex-col gap-2">
@@ -1890,6 +2013,7 @@ COMMIT;`;
                     paguPerubahan: Number(perubahan),
                     sumberDana: state.paguForm.type === 'rekening' ? document.getElementById('f-dana').value : 'DAU',
                     metodeBelanja: state.paguForm.type === 'rekening' ? document.getElementById('f-metode').value : 'TIDAK_ADA',
+                    metodeBelanja2: state.paguForm.type === 'rekening' ? document.getElementById('f-metode2').value : 'TIDAK_ADA',
                     pelaksana: state.paguForm.type === 'rekening' ? document.getElementById('f-pelaksana').value : 'TU'
                 };
 
@@ -2017,7 +2141,11 @@ COMMIT;`;
 
             // Apply Filters
             const filteredRealisasi = state.bulkRealisasi.filter(r => {
-                const matchPenerima = !state.modalFilters.penerima || (r.penerima || "").toLowerCase().includes(state.modalFilters.penerima.toLowerCase());
+                const searchLower = (state.modalFilters.penerima || "").toLowerCase();
+                const matchPenerima = !searchLower || 
+                                     (r.penerima || "").toLowerCase().includes(searchLower) || 
+                                     (r.keterangan || "").toLowerCase().includes(searchLower);
+                
                 const matchNoBp = !state.modalFilters.noBp || (r.noBp || "").toLowerCase().includes(state.modalFilters.noBp.toLowerCase());
                 
                 let matchBulan = true;
@@ -2097,11 +2225,11 @@ COMMIT;`;
                                 </div>
                                 <div class="w-32 relative shrink-0">
                                     <i data-lucide="hash" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3"></i>
-                                    <input value="${state.modalFilters.noBp}" oninput="state.modalFilters.noBp = this.value; renderRealisasiModal()" placeholder="Filter No BP..." class="w-full pl-8 pr-3 py-1 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none" />
+                                    <input value="${state.modalFilters.noBp}" oninput="state.modalFilters.noBp = this.value; renderRealisasiTableBody()" placeholder="Filter No BP..." class="w-full pl-8 pr-3 py-1 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none" />
                                 </div>
                                 <div class="flex-1 relative">
                                     <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3"></i>
-                                    <input value="${state.modalFilters.penerima}" oninput="state.modalFilters.penerima = this.value; renderRealisasiModal()" placeholder="Cari Penerima..." class="w-full pl-8 pr-3 py-1 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none" />
+                                    <input value="${state.modalFilters.penerima}" oninput="state.modalFilters.penerima = this.value; renderRealisasiTableBody()" placeholder="Cari Uraian / Penerima..." class="w-full pl-8 pr-3 py-1 bg-slate-50 rounded-lg border border-slate-100 font-bold text-[9px] outline-none" />
                                 </div>
                                 <button onclick="state.modalFilters = { bulan: 'all', penerima: '', noBp: '' }; renderRealisasiModal()" class="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg font-black uppercase text-[7px] hover:bg-rose-50 hover:text-rose-500 transition-all">Reset</button>
                             </div>
@@ -2123,6 +2251,7 @@ COMMIT;`;
                                         <th class="px-3 py-2 border-b border-slate-200 text-right text-orange-500 w-24">PPN</th>
                                         <th class="px-3 py-2 border-b border-slate-200 text-right text-orange-500 w-24">PPH</th>
                                         <th class="px-3 py-2 border-b border-slate-200 text-right text-emerald-600 w-32">Diterima</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 w-32">Sub Uk</th>
                                         <th class="px-3 py-2 border-b border-slate-200 text-center w-14">Aksi</th>
                                     </tr>
                                 </thead>
@@ -2164,6 +2293,24 @@ COMMIT;`;
                                                 <td class="px-3 py-2 text-right font-mono text-[10px] font-black text-emerald-600 bg-emerald-50/30">
                                                     ${((r.nilai || 0) - (r.ppn || 0) - (r.pph || 0)).toLocaleString('id-ID')}
                                                 </td>
+                                                <td class="px-2 py-1 border-r border-slate-100 align-middle">
+                                                    <div class="flex flex-wrap gap-1 justify-center">
+                                                        ${[
+                                                            {id: 'DI', label: '1: DI'}, 
+                                                            {id: 'PA', label: '2: PA'}, 
+                                                            {id: 'LU', label: '3: LU'}, 
+                                                            {id: 'PMKS', label: '4: PMKS'}
+                                                        ].map(opt => `
+                                                            <label class="flex items-center gap-0.5 cursor-pointer group">
+                                                                <input type="checkbox" 
+                                                                       ${(r.subUk || []).includes(opt.id) ? 'checked' : ''} 
+                                                                       onchange="toggleSubUk('${r.id}', '${opt.id}')"
+                                                                       class="w-2.5 h-2.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                                                <span class="text-[7px] font-black text-slate-500 group-hover:text-emerald-600">${opt.label}</span>
+                                                            </label>
+                                                        `).join('')}
+                                                    </div>
+                                                </td>
                                                 <td class="px-2 py-2 text-center">
                                                     <button onclick="removeRealRowById('${r.id}')" class="p-1 text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                                                 </td>
@@ -2183,6 +2330,123 @@ COMMIT;`;
             lucide.createIcons();
         }
 
+        function renderRealisasiTableBody() {
+            const body = document.getElementById('transaksi-body');
+            if (!body) return;
+
+            // Apply Filters
+            const filteredRealisasi = state.bulkRealisasi.filter(r => {
+                const searchLower = (state.modalFilters.penerima || "").toLowerCase();
+                const matchPenerima = !searchLower || 
+                                     (r.penerima || "").toLowerCase().includes(searchLower) || 
+                                     (r.keterangan || "").toLowerCase().includes(searchLower);
+                
+                const matchNoBp = !state.modalFilters.noBp || (r.noBp || "").toLowerCase().includes(state.modalFilters.noBp.toLowerCase());
+                
+                let matchBulan = true;
+                if (state.modalFilters.bulan !== 'all') {
+                    if (r.tanggal) {
+                        const dateParts = r.tanggal.split(/[-/.]/);
+                        let m = -1;
+                        if (dateParts.length === 3) {
+                            if (parseInt(dateParts[0]) > 31) m = parseInt(dateParts[1]) - 1;
+                            else if (parseInt(dateParts[2]) > 31) m = parseInt(dateParts[1]) - 1;
+                            else m = parseInt(dateParts[1]) - 1;
+                        }
+                        matchBulan = m === parseInt(state.modalFilters.bulan);
+                    } else {
+                        matchBulan = false;
+                    }
+                }
+                return matchPenerima && matchBulan && matchNoBp;
+            });
+
+            // Hitung No BP duplikat untuk filtered saja (atau seluruh bulk?)
+            // Sebaiknya seluruh bulk agar peringatan duplikat tetap akurat walau terfilter
+            const noBpCounts = {};
+            state.bulkRealisasi.forEach(r => {
+                if (r.noBp) noBpCounts[r.noBp] = (noBpCounts[r.noBp] || 0) + 1;
+            });
+
+            body.innerHTML = filteredRealisasi.map((r) => {
+                const isDuplicate = r.noBp && noBpCounts[r.noBp] > 1;
+                return `
+                    <tr class="hover:bg-emerald-50/30 transition-colors">
+                        <td class="p-0 border-r border-slate-100 ${isDuplicate ? 'bg-rose-50' : ''}">
+                            <input value="${r.noBp || ''}" 
+                                   oninput="updateRealRowById('${r.id}', 'noBp', this.value)" 
+                                   class="w-full px-3 py-2 font-mono text-[11px] font-black ${isDuplicate ? 'text-rose-600' : 'text-slate-700'} bg-transparent outline-none focus:bg-emerald-50" 
+                                   placeholder="BP-xxx" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${r.tanggal || ''}" oninput="updateRealRowById('${r.id}', 'tanggal', this.value)" class="w-full px-3 py-2 text-[10px] font-bold bg-transparent outline-none focus:bg-emerald-50" placeholder="YYYY-MM-DD" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <textarea oninput="updateRealRowById('${r.id}', 'keterangan', this.value.toUpperCase())" 
+                                      class="w-full px-3 py-2 text-[10px] font-bold uppercase bg-transparent outline-none focus:bg-emerald-50 resize-none min-h-[40px] leading-tight" 
+                                      rows="2"
+                                      placeholder="Uraian...">${r.keterangan || ''}</textarea>
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <textarea oninput="updateRealRowById('${r.id}', 'penerima', this.value.toUpperCase())" 
+                                      class="w-full px-3 py-2 text-[10px] font-bold uppercase bg-transparent outline-none focus:bg-emerald-50 resize-none min-h-[40px] leading-tight" 
+                                      rows="2"
+                                      placeholder="Nama...">${r.penerima || ''}</textarea>
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${formatRupiah(r.nilai)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'nilai', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-black text-emerald-700 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${formatRupiah(r.ppn)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'ppn', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-bold text-orange-500 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                        </td>
+                        <td class="p-0 border-r border-slate-100">
+                            <input value="${formatRupiah(r.pph)}" oninput="this.value = formatRupiah(this.value); updateRealRowById('${r.id}', 'pph', parseRupiah(this.value))" class="w-full px-3 py-2 text-right font-mono text-[10px] font-bold text-orange-500 bg-transparent outline-none focus:bg-emerald-50" placeholder="0" />
+                        </td>
+                        <td id="netto-${r.id}" class="px-3 py-2 text-right font-mono text-[10px] font-black text-emerald-600 bg-emerald-50/30">
+                            ${((r.nilai || 0) - (r.ppn || 0) - (r.pph || 0)).toLocaleString('id-ID')}
+                        </td>
+                        <td class="px-2 py-1 border-r border-slate-100 align-middle">
+                            <div class="flex flex-wrap gap-1 justify-center">
+                                ${[
+                                    {id: 'DI', label: '1: DI'}, 
+                                    {id: 'PA', label: '2: PA'}, 
+                                    {id: 'LU', label: '3: LU'}, 
+                                    {id: 'PMKS', label: '4: PMKS'}
+                                ].map(opt => `
+                                    <label class="flex items-center gap-0.5 cursor-pointer group">
+                                        <input type="checkbox" 
+                                               ${(r.subUk || []).includes(opt.id) ? 'checked' : ''} 
+                                               onchange="toggleSubUk('${r.id}', '${opt.id}')"
+                                               class="w-2.5 h-2.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                        <span class="text-[7px] font-black text-slate-500 group-hover:text-emerald-600">${opt.label}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </td>
+                        <td class="px-2 py-2 text-center">
+                            <button onclick="removeRealRowById('${r.id}')" class="p-1 text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            lucide.createIcons();
+            
+            // Update Header Stats (tanpa re-render seluruh modal)
+            const activePagu = parseFloat(document.getElementById('modal-header-pagu')?.dataset.val || 0);
+            const currentTotalReal = state.bulkRealisasi.reduce((acc, r) => acc + (r.nilai || 0), 0);
+            const currentSisa = activePagu - currentTotalReal;
+
+            const realEl = document.getElementById('modal-header-real');
+            const sisaEl = document.getElementById('modal-header-sisa');
+
+            if (realEl) realEl.innerText = `Rp ${formatRupiah(currentTotalReal)}`;
+            if (sisaEl) {
+                sisaEl.innerText = `Rp ${formatRupiah(currentSisa)}`;
+                sisaEl.className = `text-xs font-mono font-black ${currentSisa < 0 ? 'text-rose-400' : 'text-yellow-100'}`;
+            }
+        }
+
         function closeRealisasiModal() {
             document.getElementById('realisasi-modal').classList.add('hidden');
             document.getElementById('realisasi-modal').classList.remove('flex');
@@ -2196,12 +2460,13 @@ COMMIT;`;
                 tanggal: new Date().toISOString().split('T')[0], 
                 keterangan: '', 
                 penerima: '', 
+                subUk: [], // Checklist Sub Uk: DI, PA, LU, PMKS
                 nilai: 0, 
                 ppn: 0, 
                 pph: 0 
             };
              state.bulkRealisasi.unshift(newRow);
-             renderRealisasiModal();
+             renderRealisasiTableBody();
          }
 
         function updateRealRowById(id, field, val) {
@@ -2210,15 +2475,16 @@ COMMIT;`;
 
             state.bulkRealisasi[idx][field] = val;
             
-            // Jika field adalah noBp, render ulang modal untuk memperbarui sortir dan warna duplikat
+            // Jika field adalah noBp, render ulang untuk memperbarui warna duplikat
+            // Jika field adalah tanggal/keterangan/penerima, jangan render ulang agar kursor tidak hilang
             if (field === 'noBp') {
-                renderRealisasiModal();
+                renderRealisasiTableBody();
                 return;
             }
 
             // Update Header Stats
+            const activePagu = parseFloat(document.getElementById('modal-header-pagu')?.dataset.val || 0);
             const currentTotalReal = state.bulkRealisasi.reduce((acc, r) => acc + (r.nilai || 0), 0);
-            const activePagu = parseFloat(document.getElementById('modal-header-pagu').dataset.val);
             const currentSisa = activePagu - currentTotalReal;
 
             const realEl = document.getElementById('modal-header-real');
@@ -2230,9 +2496,32 @@ COMMIT;`;
                 sisaEl.className = `text-xs font-mono font-black ${currentSisa < 0 ? 'text-rose-400' : 'text-yellow-100'}`;
             }
 
-            // Update row Netto specifically without re-rendering everything if possible
-            // But since we use IDs and filters, finding the row in DOM is safer
-            renderRealisasiModal(); // Simple re-render for consistency
+            // Jika mengedit nilai/ppn/pph, update kolom Netto di baris tersebut secara langsung
+            if (['nilai', 'ppn', 'pph'].includes(field)) {
+                const r = state.bulkRealisasi[idx];
+                const netto = (r.nilai || 0) - (r.ppn || 0) - (r.pph || 0);
+                const nettoEl = document.getElementById(`netto-${id}`);
+                if (nettoEl) {
+                    nettoEl.innerText = netto.toLocaleString('id-ID');
+                }
+            }
+        }
+
+        function toggleSubUk(id, uk) {
+            const idx = state.bulkRealisasi.findIndex(r => r.id === id);
+            if (idx === -1) return;
+
+            if (!state.bulkRealisasi[idx].subUk) state.bulkRealisasi[idx].subUk = [];
+            
+            const current = state.bulkRealisasi[idx].subUk;
+            const foundIdx = current.indexOf(uk);
+            
+            if (foundIdx > -1) {
+                current.splice(foundIdx, 1);
+            } else {
+                current.push(uk);
+            }
+            // No need to re-render everything, just local state update is enough since checkboxes are already synced with state
         }
 
         function removeRealRowById(id) {
@@ -2241,7 +2530,7 @@ COMMIT;`;
             
             if (confirm(`Apakah Anda yakin ingin menghapus ${label}?`)) {
                 state.bulkRealisasi = state.bulkRealisasi.filter(r => r.id !== id);
-                renderRealisasiModal();
+                renderRealisasiTableBody();
             }
         }
 
@@ -2273,6 +2562,7 @@ COMMIT;`;
                     tanggal: cols[1] || new Date().toISOString().split('T')[0],
                     keterangan: (cols[2] || '').toUpperCase(),
                     penerima: (cols[3] || '').toUpperCase(),
+                    subUk: [],
                     nilai: parseRupiah(cols[4] || '0'),
                     ppn: parseRupiah(cols[5] || '0'),
                     pph: parseRupiah(cols[6] || '0')
@@ -2464,7 +2754,10 @@ COMMIT;`;
         }
 
         // --- START ---
-        init();
+        window.addEventListener('load', () => {
+            console.log("[APBD] Page loaded, starting init...");
+            init();
+        });
     </script>
 </body>
 </html>
