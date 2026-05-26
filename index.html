@@ -527,6 +527,14 @@
                     </button>
                     <div id="sub-belanja" class="submenu-container pl-11 space-y-0">
                         <div class="flex items-center justify-between py-1 pr-4">
+                            <button onclick="showPage('bend23')" id="menu-bend23"
+                                class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
+                                <i data-lucide="list-checks" class="w-4 h-4"></i>
+                                <span class="font-bold text-xs">Daftar belanja (Bend 23)</span>
+                            </button>
+                            <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-1 pr-4">
                             <button onclick="showPage('sosh')" id="menu-sosh"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="package" class="w-4 h-4"></i>
@@ -652,11 +660,11 @@
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
                         <div class="flex items-center justify-between py-1 pr-4">
-                           <a href=" https://gemini.google.com/share/ebe8d0fb72a2"
+                           <button onclick="showPage('bmd')" id="menu-bmd"
                                 class="flex items-center space-x-3 w-full px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-left">
                                 <i data-lucide="database" class="w-4 h-4"></i>
                                 <span class="font-bold text-xs">Laporan BMD</span>
-                           </a>
+                           </button>
                             <i data-lucide="lock" class="w-4 h-4 text-sky-200 hidden lock-icon"></i>
                         </div>
                     </div>

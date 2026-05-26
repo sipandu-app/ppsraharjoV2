@@ -278,6 +278,11 @@ function showPage(pageId) {
                 <iframe src="./sosh.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
+        'bend23': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./bend23.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
         'pakaian': `
             <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
                 <iframe src="./pakaian.html" class="w-full h-full border-none"></iframe>
@@ -296,6 +301,11 @@ function showPage(pageId) {
         'belanja_lain': `
             <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
                 <iframe src="./belanja_lain.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
+        'bmd': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./bmd.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
         'pegawai': `

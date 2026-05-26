@@ -181,7 +181,7 @@
           resetForm();
           setActiveTab('riwayat');
         } catch (error) {
-          showToast("Gagal menyimpan data", "error");
+          showToast("Gagal menyimpan data: " + error.message, "error");
         }
       };
 
