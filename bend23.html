@@ -34,8 +34,8 @@
                 <div class="flex items-center gap-2">
                     <div class="bg-emerald-500 p-1 rounded-xl -rotate-6 shadow-xl"><i data-lucide="shopping-bag" class="w-4 h-4 text-slate-900"></i></div>
                     <div>
-                        <h1 class="text-base font-black italic tracking-tighter uppercase leading-none">BEND <span class="text-emerald-400 font-black italic text-[16px] ml-0.5">23</span></h1>
-                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mt-0.5">Daftar Belanja</p>
+                        <h1 class="text-base font-black italic tracking-tighter uppercase leading-none">BEND-<span class="text-emerald-400 font-black italic text-[16px] ml-0.5">23</span></h1>
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mt-0.5"></p>
                     </div>
                 </div>
 
@@ -44,13 +44,18 @@
                             <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
                         <i data-lucide="settings-2" class="w-3.5 h-3.5"></i> Settings
                     </button>
+                    <button onclick="switchTab('nomor-surat')" id="tab-nomor-surat" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Nomor Surat
+                    </button>
                     <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 bg-emerald-500 text-slate-900">
                         <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> CETAK BEND23
                     </button>
                     <button onclick="switchTab('rekap')" id="tab-rekap" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
-                        <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i> Rekap Belanja
+                        <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i> Rekap UNIT KERJA
                     </button>
-            
+                    <a href="apbd.html" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700">
+                        <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> REALISASI
+                    </a>
                 </nav>
             </div>
 
@@ -158,7 +163,7 @@
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                        <i data-lucide="pie-chart" class="text-emerald-500"></i> Rekapitulasi Belanja Tahunan
+                        <i data-lucide="pie-chart" class="text-emerald-500"></i> Rekapitulasi Belanja Per Unit Kerja
                     </h2>
                     <div class="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full text-slate-500 uppercase tracking-widest">
                         Tahun: <span id="rekap-tahun-label">2025</span>
@@ -182,6 +187,46 @@
                         <tfoot id="rekap-footer">
                             <!-- Totals injected by JS -->
                         </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nomor Surat Tab -->
+        <div id="content-nomor-surat" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                        <i data-lucide="file-text" class="text-emerald-500"></i> Nomor & Tanggal Surat BEND-23
+                    </h2>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Tambah Tanggal:</label>
+                            <input type="date" id="add-nomor-surat-date" class="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold w-40 outline-none focus:border-emerald-500">
+                            <button onclick="addNewNomorSuratDate()" class="bg-emerald-500 text-white p-1.5 rounded-lg hover:bg-emerald-600 transition-all">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <button onclick="saveNomorSurat()" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 hover:bg-emerald-600 transition-all shadow-lg">
+                            <i data-lucide="save" class="w-4 h-4"></i> Simpan
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[10px] border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-amber-400 uppercase tracking-widest">
+                                <th class="px-3 py-3 text-left border border-slate-800 w-32">Tanggal</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">PPS RAHARJO</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">RPS PAMARDI SIWI</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">RPS MOJOMULYO</th>
+                                <th class="px-3 py-3 text-center border border-slate-800">RPS GONDANG</th>
+                                <th class="px-3 py-3 text-center border border-slate-800 w-16">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nomor-surat-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic rows based on dates -->
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -310,10 +355,12 @@
         const BULAN_LIST = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
         let currentTrxId = null;
+        let currentTrxData = null;
 
         let state = {
             data: { pagu: [], realisasi: [] },
             collapsedUnits: new Set(), // Track collapsed Sub UKs
+            nomorSurat: {}, // Store { dateString: { unitKey: { no: '', tgl: '' } } }
             settings: {
                 kpaNama: 'SITO RESMI, AKS, MM',
                 kpaNip: '19750924 199803 2 002',
@@ -351,6 +398,17 @@
             return new Intl.NumberFormat('id-ID').format(val);
         };
 
+        const formatDateIndo = (dateStr) => {
+            if (!dateStr) return '-';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const day = parts[2];
+            const monthIdx = parseInt(parts[1]) - 1;
+            const year = parts[0];
+            const monthName = BULAN_LIST[monthIdx] ? BULAN_LIST[monthIdx].toLowerCase() : parts[1];
+            return `${parseInt(day)} ${monthName} ${year}`;
+        };
+
         async function init() {
             const dbCountEl = document.getElementById('db-count');
             try {
@@ -362,6 +420,12 @@
                     state.settings = JSON.parse(savedSettings);
                 }
                 updateSettingsUI();
+
+                // Load Nomor Surat from LocalStorage
+                const savedNomorSurat = localStorage.getItem('bend23_nomor_surat');
+                if (savedNomorSurat) {
+                    state.nomorSurat = JSON.parse(savedNomorSurat);
+                }
 
                 // Sync dropdowns with state
                 document.getElementById('filter-bulan').value = state.filters.bulan;
@@ -383,6 +447,21 @@
 
                 if (error) throw error;
 
+                // Load Config Data (Nomor Surat & Settings)
+                const { data: configData } = await supa
+                    .from('sipd_main_document')
+                    .select('*')
+                    .eq('app_id', appId + '_config')
+                    .maybeSingle();
+
+                if (configData) {
+                    if (configData.pagu) state.nomorSurat = configData.pagu;
+                    if (configData.realisasi) {
+                        state.settings = configData.realisasi;
+                        updateSettingsUI();
+                    }
+                }
+
                 if (data) {
                     state.data = {
                         pagu: data.pagu || [],
@@ -393,6 +472,7 @@
                     
                     updateHierarchyDropdowns();
                     render();
+                    renderNomorSurat(); // Selalu render tabel nomor surat setelah data dimuat
                 } else {
                     if (dbCountEl) dbCountEl.innerText = "0 (App ID Tidak Ditemukan)";
                     render(); // Call render anyway to show empty state
@@ -419,7 +499,9 @@
             activeTab.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
             activeTab.classList.add('bg-emerald-500', 'text-slate-900');
             
+            if (tabId === 'dashboard') render();
             if (tabId === 'rekap') renderRekap();
+            if (tabId === 'nomor-surat') renderNomorSurat();
             lucide.createIcons();
         }
 
@@ -499,7 +581,7 @@
             if (dpa) dpa[field] = value;
         }
 
-        function saveSettings() {
+        async function saveSettings() {
             state.settings.kpaNama = document.getElementById('set-kpa-nama').value;
             state.settings.kpaNip = document.getElementById('set-kpa-nip').value;
             state.settings.pptkNama = document.getElementById('set-pptk-nama').value;
@@ -508,7 +590,24 @@
             state.settings.bendaharaNip = document.getElementById('set-bendahara-nip').value;
             
             localStorage.setItem('bend23_settings', JSON.stringify(state.settings));
-            alert("Pengaturan Berhasil Disimpan");
+            
+            try {
+                if (supa) {
+                    const { error } = await supa
+                        .from('sipd_main_document')
+                        .upsert({ 
+                            app_id: appId + '_config', 
+                            pagu: state.nomorSurat, // Pertahankan nomor surat yang ada
+                            realisasi: state.settings
+                        }, { onConflict: 'app_id' });
+
+                    if (error) throw error;
+                }
+                alert("Pengaturan Berhasil Disimpan ke Database");
+            } catch (err) {
+                console.error("Save Settings Error:", err);
+                alert("Pengaturan tersimpan di lokal, tapi gagal ke database: " + err.message);
+            }
         }
 
         function verifySettingsPin() {
@@ -613,10 +712,141 @@
             rekapFooter.innerHTML = htmlFooter;
         }
 
+        function renderNomorSurat() {
+            const body = document.getElementById('nomor-surat-body');
+            
+            // Sort dates descending (newest first)
+            const sortedDates = Object.keys(state.nomorSurat).sort((a, b) => b.localeCompare(a));
+
+            let html = '';
+            sortedDates.forEach(dateStr => {
+                const dateData = state.nomorSurat[dateStr] || {};
+                
+                // Format YYYY-MM-DD to DD-MM-YYYY for display
+                const parts = dateStr.split('-');
+                const displayDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition-all">
+                        <td class="px-3 py-4 font-black text-emerald-600 border-r border-slate-100 bg-slate-50/50 text-[12px] mono">${displayDate}</td>
+                        ${['1', '2', '3', '4'].map(unitKey => {
+                            const val = dateData[unitKey] || ''; // Only string now
+                            return `
+                                <td class="px-3 py-2 border-r border-slate-100">
+                                    <input type="text" 
+                                        onchange="updateNomorSuratData('${dateStr}', '${unitKey}', this.value)"
+                                        value="${val}"
+                                        placeholder="Nomor Surat..."
+                                        class="w-full bg-slate-50 border border-slate-200 rounded px-2 py-2 text-[10px] font-bold outline-none focus:border-emerald-500 transition-all">
+                                </td>
+                            `;
+                        }).join('')}
+                        <td class="px-3 py-2 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="editNomorSuratDate('${dateStr}')" class="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-xl transition-all">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="removeNomorSuratDate('${dateStr}')" class="text-rose-600 hover:text-rose-800 p-2 hover:bg-rose-50 rounded-xl transition-all">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (sortedDates.length === 0) {
+                html = `<tr><td colspan="6" class="py-12 text-center text-slate-400 italic font-black uppercase tracking-widest opacity-30">Belum ada data tanggal. Gunakan menu "Tambah Tanggal" di atas.</td></tr>`;
+            }
+
+            body.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function addNewNomorSuratDate() {
+            const input = document.getElementById('add-nomor-surat-date');
+            const dateStr = input.value; // YYYY-MM-DD from date picker
+            
+            if (!dateStr) {
+                alert("Pilih tanggal terlebih dahulu!");
+                return;
+            }
+
+            if (state.nomorSurat[dateStr]) {
+                alert("Tanggal ini sudah ada dalam daftar.");
+                return;
+            }
+
+            // Initialize new date entry with empty strings for each unit
+            state.nomorSurat[dateStr] = {
+                '1': '',
+                '2': '',
+                '3': '',
+                '4': ''
+            };
+
+            input.value = '';
+            renderNomorSurat();
+        }
+
+        function editNomorSuratDate(oldDateStr) {
+            const newDateStr = prompt("Masukkan tanggal baru (YYYY-MM-DD):", oldDateStr);
+            if (newDateStr && newDateStr !== oldDateStr) {
+                if (state.nomorSurat[newDateStr]) {
+                    alert("Tanggal baru sudah ada dalam daftar!");
+                    return;
+                }
+                state.nomorSurat[newDateStr] = state.nomorSurat[oldDateStr];
+                delete state.nomorSurat[oldDateStr];
+                renderNomorSurat();
+            }
+        }
+
+        function removeNomorSuratDate(dateStr) {
+            const parts = dateStr.split('-');
+            const displayDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
+            if (confirm(`Hapus data untuk tanggal ${displayDate}?`)) {
+                delete state.nomorSurat[dateStr];
+                renderNomorSurat();
+            }
+        }
+
+        function updateNomorSuratData(dateStr, unitKey, value) {
+            if (!state.nomorSurat[dateStr]) state.nomorSurat[dateStr] = {};
+            state.nomorSurat[dateStr][unitKey] = value;
+        }
+
+        async function saveNomorSurat() {
+             try {
+                 localStorage.setItem('bend23_nomor_surat', JSON.stringify(state.nomorSurat));
+                 
+                 if (supa) {
+                     const { error } = await supa
+                         .from('sipd_main_document')
+                         .upsert({ 
+                             app_id: appId + '_config', 
+                             pagu: state.nomorSurat,
+                             realisasi: state.settings // Simpan juga settings saat ini agar sinkron
+                         }, { onConflict: 'app_id' });
+
+                     if (error) throw error;
+                 }
+                 
+                 alert("Data Nomor & Tanggal Surat Berhasil Disimpan ke Database");
+             } catch (err) {
+                 console.error("Save Nomor Surat Error:", err);
+                 alert("Gagal menyimpan ke database, tapi tersimpan di lokal: " + err.message);
+             }
+         }
+
         function handleFilterChange() {
             state.filters.bulan = parseInt(document.getElementById('filter-bulan').value);
             state.filters.tahun = parseInt(document.getElementById('filter-tahun').value);
-            render();
+            
+            // Re-render active tab content
+            if (!document.getElementById('content-dashboard').classList.contains('hidden')) render();
+            if (!document.getElementById('content-rekap').classList.contains('hidden')) renderRekap();
+            if (!document.getElementById('content-nomor-surat').classList.contains('hidden')) renderNomorSurat();
         }
 
         function handleHierarchyChange(level) {
@@ -867,6 +1097,23 @@
                 const unitTotal = items.reduce((sum, r) => sum + (parseInt(r.nilai) || 0), 0);
                 const isCollapsed = state.collapsedUnits.has(unitKey);
 
+                const filterMonthStr = (state.filters.bulan + 1).toString().padStart(2, '0');
+                const filterYearStr = state.filters.tahun.toString();
+                
+                // Fetch saved Nomor & Tgl Surat for this unit from the latest entry in the filtered month
+                let savedNo = '';
+                let savedTgl = '';
+                
+                const matchingDates = Object.keys(state.nomorSurat)
+                    .filter(d => d.slice(5,7) === filterMonthStr && d.slice(0,4) === filterYearStr)
+                    .sort((a, b) => b.localeCompare(a));
+                
+                if (matchingDates.length > 0) {
+                    const latestDate = matchingDates[0];
+                    savedNo = state.nomorSurat[latestDate][unitKey] || '';
+                    savedTgl = formatDateIndo(latestDate);
+                }
+
                 // Unit Header Row (Double click to toggle)
                 html += `
                     <tr ondblclick="toggleUnit('${unitKey}')" class="${bgColor} font-black text-[10px] uppercase tracking-widest border-y-2 border-slate-200 cursor-pointer select-none hover:brightness-95 transition-all">
@@ -883,10 +1130,10 @@
                                     
                                     <div class="flex items-center gap-2 px-3 border-x border-slate-200">
                                         <div class="flex flex-col">
-                                            <input type="text" id="no-surat-${unitKey}" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-32 outline-none focus:border-emerald-500" placeholder="Nomor Surat...">
+                                            <input type="text" id="no-surat-${unitKey}" value="${savedNo}" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-32 outline-none focus:border-emerald-500" placeholder="Nomor Surat...">
                                         </div>
                                         <div class="flex flex-col">
-                                            <input type="text" id="tgl-surat-${unitKey}" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-28 outline-none focus:border-emerald-500" placeholder="Tanggal Surat...">
+                                            <input type="text" id="tgl-surat-${unitKey}" value="${savedTgl}" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-28 outline-none focus:border-emerald-500" placeholder="Tanggal Surat...">
                                         </div>
                                     </div>
 
@@ -959,7 +1206,7 @@
                                 <td class="px-4 py-3 border-r border-slate-100 text-right font-mono text-orange-500">${formatRupiah(ppn)}</td>
                                 <td class="px-4 py-3 border-r border-slate-100 text-right font-mono text-orange-500">${formatRupiah(pph)}</td>
                                 <td class="px-4 py-3 text-center">
-                                    <button onclick="openMoveModal('${r.id}', '${(r.keterangan || "-").replace(/'/g, "\\'")}')" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white transition-all text-[9px] uppercase font-black flex items-center gap-1 mx-auto">
+                                    <button onclick="openMoveModal('${r.id}', '${(r.keterangan || "-").replace(/'/g, "\\'")}', '${r.tanggal}', '${nilai}')" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white transition-all text-[9px] uppercase font-black flex items-center gap-1 mx-auto">
                                         <i data-lucide="arrow-right-left" class="w-3 h-3"></i> Pindah
                                     </button>
                                 </td>
@@ -984,8 +1231,9 @@
             lucide.createIcons();
         }
 
-        async function openMoveModal(trxId, uraian) {
+        async function openMoveModal(trxId, uraian, tanggal, nilai) {
             currentTrxId = trxId;
+            currentTrxData = { id: trxId, uraian: uraian, tanggal: tanggal, nilai: nilai };
             document.getElementById('move-modal-uraian').innerText = uraian;
             document.getElementById('modal-move').classList.remove('hidden');
         }
@@ -1020,7 +1268,16 @@
                 }
 
                 const updatedRealisasi = currentDoc.realisasi || [];
-                const idx = updatedRealisasi.findIndex(r => r.id === currentTrxId);
+                
+                // Pencarian lebih kuat: Cek ID, atau kombinasi Keterangan + Tanggal + Nilai
+                const idx = updatedRealisasi.findIndex(r => {
+                    const matchId = r.id && currentTrxId && String(r.id) === String(currentTrxId);
+                    const matchFields = r.keterangan === currentTrxData.uraian && 
+                                       r.tanggal === currentTrxData.tanggal && 
+                                       String(r.nilai) === String(currentTrxData.nilai);
+                    return matchId || matchFields;
+                });
+
                 if (idx !== -1) {
                     updatedRealisasi[idx].subUk = newSubUk;
                     
@@ -1031,11 +1288,21 @@
 
                     if (error) throw error;
                     
-                    // Update state local before init to feel faster
-                    const stateIdx = state.data.realisasi.findIndex(r => r.id === currentTrxId);
+                    // Update state local
+                    const stateIdx = state.data.realisasi.findIndex(r => {
+                        const matchId = r.id && currentTrxId && String(r.id) === String(currentTrxId);
+                        const matchFields = r.keterangan === currentTrxData.uraian && 
+                                           r.tanggal === currentTrxData.tanggal && 
+                                           String(r.nilai) === String(currentTrxData.nilai);
+                        return matchId || matchFields;
+                    });
                     if (stateIdx !== -1) state.data.realisasi[stateIdx].subUk = newSubUk;
                     
-                    init(); // Reload all for safety
+                    alert("Data Berhasil Dipindahkan");
+                    init(); 
+                } else {
+                    alert("Data tidak ditemukan di database. Pastikan data belum dihapus atau diubah di halaman lain.");
+                    dbCountEl.innerText = originalText;
                 }
             } catch (err) {
                 console.error("Move Error:", err);
@@ -1103,8 +1370,10 @@
 
                 Object.keys(rekeningGroups).forEach((rekeningId) => {
                     if (rekeningId === 'none') return;
-                    fullHTML += generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId]);
-                    fullHTML += '<div style="page-break-after: always;"></div>';
+                    fullHTML += `<div style="position: relative; page-break-after: always; min-height: 30.5cm;">
+                        ${generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId])}
+                        <div class="watermark">Printed By Sipandu</div>
+                    </div>`;
                 });
             });
 
@@ -1114,21 +1383,26 @@
                 <head>
                     <title>Cetak Terfilter BEND-23</title>
                     <style>
-                        body { font-family: 'Arial', sans-serif; font-size: 10px; line-height: 1.2; color: #000; padding: 10px; }
+                        body { font-family: 'Arial', sans-serif; font-size: 11px; line-height: 1.2; color: #000; padding: 10px; }
                         .header-box { border: 1.5px solid #000; padding: 3px 10px; display: inline-block; float: right; font-weight: bold; text-align: center; }
                         .clear { clear: both; }
                         .title { text-align: center; font-weight: bold; text-decoration: underline; margin: 10px 0 2px 0; font-size: 11px; }
-                        .nomor { text-align: center; margin-bottom: 10px; font-size: 10px; }
+                        .nomor { text-align: center; margin-bottom: 10px; font-size: 11px; }
                         .info-table { width: 100%; margin-bottom: 10px; border-collapse: collapse; }
-                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 9px; }
+                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 10px; }
                         .info-table td:first-child { width: 100px; }
                         .info-table td:nth-child(2) { width: 8px; }
+                        .statement { margin-bottom: 20px; text-align: justify; font-size: 10px; }
                         table.main-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
                         table.main-table th, table.main-table td { border: 1px solid #000; padding: 3px 4px; word-wrap: break-word; }
-                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 8.5px; }
-                        table.main-table td { font-size: 8.5px; }
+                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 9.5px; }
+                        table.main-table td { font-size: 9.5px; }
                         .footer-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
-                        .footer-table td { width: 50%; text-align: center; vertical-align: top; font-size: 9px; }
+                        .footer-table td { width: 50%; text-align: center; vertical-align: top; font-size: 10px; }
+                        .sig-space { height: 60px; }
+                        .bold { font-weight: bold; }
+                        .watermark { position: absolute; bottom: 0.5cm; right: 1cm; font-size: 10px; color: #94a3b8; font-weight: normal; font-style: italic; font-family: Arial, sans-serif; }
+                        tfoot { display: table-row-group; }
                         @media print { @page { margin: 1cm; } }
                     </style>
                 </head>
@@ -1176,10 +1450,10 @@
             
             sortedGroupIds.forEach((rekeningId, idx) => {
                 if (rekeningId === 'none') return;
-                fullHTML += generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId]);
-                if (idx < sortedGroupIds.length - 1) {
-                    fullHTML += '<div style="page-break-after: always;"></div>';
-                }
+                fullHTML += `<div style="position: relative; page-break-after: always; min-height: 30.5cm;">
+                    ${generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId])}
+                    <div class="watermark">Printed By Sipandu</div>
+                </div>`;
             });
 
             const printWindow = window.open('', '_blank');
@@ -1188,24 +1462,26 @@
                 <head>
                     <title>Cetak Semua BEND-23 - ${unit.name}</title>
                     <style>
-                        body { font-family: 'Arial', sans-serif; font-size: 10px; line-height: 1.2; color: #000; padding: 10px; }
+                        body { font-family: 'Arial', sans-serif; font-size: 11px; line-height: 1.2; color: #000; padding: 10px; }
                         .header-box { border: 1.5px solid #000; padding: 3px 10px; display: inline-block; float: right; font-weight: bold; text-align: center; }
                         .clear { clear: both; }
                         .title { text-align: center; font-weight: bold; text-decoration: underline; margin: 10px 0 2px 0; font-size: 11px; }
-                        .nomor { text-align: center; margin-bottom: 10px; font-size: 10px; }
+                        .nomor { text-align: center; margin-bottom: 10px; font-size: 11px; }
                         .info-table { width: 100%; margin-bottom: 10px; border-collapse: collapse; }
-                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 9px; }
+                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 10px; }
                         .info-table td:first-child { width: 100px; }
                         .info-table td:nth-child(2) { width: 8px; }
-                        .statement { margin-bottom: 10px; text-align: justify; font-size: 9px; }
+                        .statement { margin-bottom: 20px; text-align: justify; font-size: 10px; }
                         table.main-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
                         table.main-table th, table.main-table td { border: 1px solid #000; padding: 3px 4px; word-wrap: break-word; }
-                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 8.5px; }
-                        table.main-table td { font-size: 8.5px; }
+                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 9.5px; }
+                        table.main-table td { font-size: 9.5px; }
                         .footer-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
-                        .footer-table td { width: 50%; text-align: center; vertical-align: top; font-size: 9px; }
-                        .sig-space { height: 40px; }
+                        .footer-table td { width: 50%; text-align: center; vertical-align: top; font-size: 10px; }
+                        .sig-space { height: 60px; }
                         .bold { font-weight: bold; }
+                        .watermark { position: absolute; bottom: 0.5cm; right: 1cm; font-size: 10px; color: #94a3b8; font-weight: normal; font-style: italic; font-family: Arial, sans-serif; }
+                        tfoot { display: table-row-group; }
                         @media print {
                             body { padding: 0; }
                             @page { margin: 1cm; }
@@ -1283,7 +1559,7 @@
             return `
                 <div class="header-box">
                     BEND - 23<br>
-                    <span style="font-size: 7px; font-weight: normal;">Format SPTB Untuk SPM TU</span>
+                    <span style="font-size: 8px; font-weight: normal;">Format SPTB Untuk SPM TU</span>
                 </div>
                 <div class="clear"></div>
                 
@@ -1292,17 +1568,17 @@
 
                 <table class="info-table">
                     <tr><td>Organisasi</td><td>:</td><td>${info.organisasi}</td></tr>
-                    <tr><td>Unit Kerja</td><td>:</td><td>${info.subUnit}</td></tr>
                     <tr><td>Tanggal / No. DPA</td><td>:</td><td>${info.dpa}</td></tr>
                     <tr><td>Program</td><td>:</td><td>${info.program}</td></tr>
                     <tr><td>Kegiatan</td><td>:</td><td>${info.kegiatan}</td></tr>
                     <tr><td>Sub Kegiatan</td><td>:</td><td>${info.subKegiatan}</td></tr>
+                    <tr><td></td><td></td><td>${info.subUnit} SRAGEN</td></tr>
                 </table>
 
                 <div class="statement">
                     Yang bertandatangan dibawah ini Kuasa Pengguna Anggaran (KPA) ${info.subUnit} menyatakan bahwa,
-                    saya bertanggung jawab secara formal dan material atas segala pengeluaran yang telah dibayar lunas oleh Bendahara Pengeluaran Pembantu
-                    kepada yang berhak menerima serta kebenaran perhitungan dan setoran Pajak yang dipungut atas pembayaran tersebut dengan perincian
+                    saya bertanggung jawab secara formal and material atas segala pengeluaran yang telah dibayar lunas oleh Bendahara Pengeluaran Pembantu
+                    kepada yang berhak menerima serta kebenaran perhitungan and setoran Pajak yang dipungut atas pembayaran tersebut dengan perincian
                     sebagai berikut :
                 </div>
 
@@ -1323,7 +1599,7 @@
                             <th style="width: 50px;">PPN</th>
                             <th style="width: 50px;">PPh</th>
                         </tr>
-                        <tr style="font-size: 7px;">
+                        <tr style="font-size: 8px;">
                             <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
                         </tr>
                     </thead>
@@ -1362,6 +1638,7 @@
                             </td>
                     </tr>
                 </table>
+                <div class="watermark">Printed By Sipandu</div>
             `;
         }
 
@@ -1388,24 +1665,25 @@
                 <head>
                     <title>Cetak BEND-23 - ${unit.name}</title>
                     <style>
-                        body { font-family: 'Arial', sans-serif; font-size: 10px; line-height: 1.2; color: #000; padding: 10px; }
+                        body { font-family: 'Arial', sans-serif; font-size: 11px; line-height: 1.2; color: #000; padding: 10px; }
                         .header-box { border: 1.5px solid #000; padding: 3px 10px; display: inline-block; float: right; font-weight: bold; text-align: center; }
                         .clear { clear: both; }
                         .title { text-align: center; font-weight: bold; text-decoration: underline; margin: 10px 0 2px 0; font-size: 11px; }
-                        .nomor { text-align: center; margin-bottom: 10px; font-size: 10px; }
+                        .nomor { text-align: center; margin-bottom: 10px; font-size: 11px; }
                         .info-table { width: 100%; margin-bottom: 10px; border-collapse: collapse; }
-                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 9px; }
+                        .info-table td { vertical-align: top; padding: 1px 0; font-size: 10px; }
                         .info-table td:first-child { width: 100px; }
                         .info-table td:nth-child(2) { width: 8px; }
-                        .statement { margin-bottom: 10px; text-align: justify; font-size: 9px; }
+                        .statement { margin-bottom: 20px; text-align: justify; font-size: 10px; }
                         table.main-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
                         table.main-table th, table.main-table td { border: 1px solid #000; padding: 3px 4px; word-wrap: break-word; }
-                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 8.5px; }
-                        table.main-table td { font-size: 8.5px; }
+                        table.main-table th { background: #f2f2f2; text-align: center; font-size: 9.5px; }
+                        table.main-table td { font-size: 9.5px; }
                         .footer-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
-                        .footer-table td { width: 50%; text-align: center; vertical-align: top; font-size: 9px; }
-                        .sig-space { height: 40px; }
+                        .sig-space { height: 60px; }
                         .bold { font-weight: bold; }
+                        .watermark { position: absolute; bottom: 0.5cm; right: 1cm; font-size: 10px; color: #94a3b8; font-weight: normal; font-style: italic; font-family: Arial, sans-serif; }
+                        tfoot { display: table-row-group; }
                         @media print {
                             body { padding: 0; }
                             @page { margin: 1cm; }
@@ -1413,7 +1691,10 @@
                     </style>
                 </head>
                 <body>
-                    ${generateBend23HTML(unitKey, groupId, items)}
+                    <div style="position: relative; min-height: 30.5cm;">
+                        ${generateBend23HTML(unitKey, groupId, items)}
+                        <div class="watermark">Printed By Sipandu</div>
+                    </div>
                     <script>
                         window.onload = function() { window.print(); }
                     <\/script>
