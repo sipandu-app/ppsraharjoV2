@@ -816,6 +816,23 @@
             state.nomorSurat[dateStr][unitKey] = value;
         }
 
+        function updateNomorSuratFromDashboard(unitKey, type, value) {
+            const filterMonthStr = (state.filters.bulan + 1).toString().padStart(2, '0');
+            const filterYearStr = state.filters.tahun.toString();
+            
+            const matchingDates = Object.keys(state.nomorSurat)
+                .filter(d => d.slice(5,7) === filterMonthStr && d.slice(0,4) === filterYearStr)
+                .sort((a, b) => b.localeCompare(a));
+            
+            if (matchingDates.length > 0) {
+                const latestDate = matchingDates[0];
+                if (type === 'no') {
+                    state.nomorSurat[latestDate][unitKey] = value;
+                }
+                // Catatan: Tanggal tidak diupdate otomatis ke DB karena formatnya string Indo di dashboard
+            }
+        }
+
         async function saveNomorSurat() {
              try {
                  localStorage.setItem('bend23_nomor_surat', JSON.stringify(state.nomorSurat));
@@ -1130,10 +1147,10 @@
                                     
                                     <div class="flex items-center gap-2 px-3 border-x border-slate-200">
                                         <div class="flex flex-col">
-                                            <input type="text" id="no-surat-${unitKey}" value="${savedNo}" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-32 outline-none focus:border-emerald-500" placeholder="Nomor Surat...">
+                                            <input type="text" id="no-surat-${unitKey}" value="${savedNo}" onchange="updateNomorSuratFromDashboard('${unitKey}', 'no', this.value)" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-32 outline-none focus:border-emerald-500" placeholder="Nomor Surat...">
                                         </div>
                                         <div class="flex flex-col">
-                                            <input type="text" id="tgl-surat-${unitKey}" value="${savedTgl}" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-28 outline-none focus:border-emerald-500" placeholder="Tanggal Surat...">
+                                            <input type="text" id="tgl-surat-${unitKey}" value="${savedTgl}" onchange="updateNomorSuratFromDashboard('${unitKey}', 'tgl', this.value)" class="bg-white/80 border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold w-28 outline-none focus:border-emerald-500" placeholder="Tanggal Surat...">
                                         </div>
                                     </div>
 
@@ -1370,7 +1387,7 @@
 
                 Object.keys(rekeningGroups).forEach((rekeningId) => {
                     if (rekeningId === 'none') return;
-                    fullHTML += `<div style="position: relative; page-break-after: always; min-height: 30.5cm;">
+                    fullHTML += `<div style="position: relative; page-break-after: always; min-height: 31cm;">
                         ${generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId])}
                         <div class="watermark">Printed By Sipandu</div>
                     </div>`;
@@ -1403,7 +1420,12 @@
                         .bold { font-weight: bold; }
                         .watermark { position: absolute; bottom: 0.5cm; right: 1cm; font-size: 10px; color: #94a3b8; font-weight: normal; font-style: italic; font-family: Arial, sans-serif; }
                         tfoot { display: table-row-group; }
-                        @media print { @page { margin: 1cm; } }
+                        @media print { 
+                            @page { 
+                                size: 215mm 330mm; 
+                                margin: 1cm; 
+                            } 
+                        }
                     </style>
                 </head>
                 <body>
@@ -1450,7 +1472,7 @@
             
             sortedGroupIds.forEach((rekeningId, idx) => {
                 if (rekeningId === 'none') return;
-                fullHTML += `<div style="position: relative; page-break-after: always; min-height: 30.5cm;">
+                fullHTML += `<div style="position: relative; page-break-after: always; min-height: 31cm;">
                     ${generateBend23HTML(unitKey, rekeningId, rekeningGroups[rekeningId])}
                     <div class="watermark">Printed By Sipandu</div>
                 </div>`;
@@ -1484,7 +1506,10 @@
                         tfoot { display: table-row-group; }
                         @media print {
                             body { padding: 0; }
-                            @page { margin: 1cm; }
+                            @page { 
+                                size: 215mm 330mm; 
+                                margin: 1cm; 
+                            }
                         }
                     </style>
                 </head>
@@ -1535,9 +1560,15 @@
 
             let tableRows = '';
             let totalNilai = 0;
+            let totalPPN = 0;
+            let totalPPH = 0;
             items.forEach((r, idx) => {
                 const nilai = parseInt(r.nilai) || 0;
+                const ppn = parseInt(r.ppn) || 0;
+                const pph = parseInt(r.pph) || 0;
                 totalNilai += nilai;
+                totalPPN += ppn;
+                totalPPH += pph;
                 const rek = findInTree(state.data.pagu, r.rekeningId);
                 const kodeRek = rek ? rek.kode : '-';
                 
@@ -1550,8 +1581,8 @@
                         <td style="text-align: center;">${r.tanggal}</td>
                         <td style="text-align: center;">${r.noBp || '-'}</td>
                         <td style="text-align: right;">${formatRupiah(nilai)}</td>
-                        <td style="text-align: right;">-</td>
-                        <td style="text-align: right;">-</td>
+                        <td style="text-align: right;">${formatRupiah(ppn)}</td>
+                        <td style="text-align: right;">${formatRupiah(pph)}</td>
                     </tr>
                 `;
             });
@@ -1610,8 +1641,8 @@
                         <tr class="bold">
                             <td colspan="6" style="text-align: center; text-transform: uppercase;">J u m l a h</td>
                             <td style="text-align: right;">${formatRupiah(totalNilai)}</td>
-                            <td style="text-align: right;">-</td>
-                            <td style="text-align: right;">-</td>
+                            <td style="text-align: right;">${formatRupiah(totalPPN)}</td>
+                            <td style="text-align: right;">${formatRupiah(totalPPH)}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -1686,12 +1717,15 @@
                         tfoot { display: table-row-group; }
                         @media print {
                             body { padding: 0; }
-                            @page { margin: 1cm; }
+                            @page { 
+                                size: 215mm 330mm; 
+                                margin: 1cm; 
+                            }
                         }
                     </style>
                 </head>
                 <body>
-                    <div style="position: relative; min-height: 30.5cm;">
+                    <div style="position: relative; min-height: 31cm;">
                         ${generateBend23HTML(unitKey, groupId, items)}
                         <div class="watermark">Printed By Sipandu</div>
                     </div>
