@@ -180,7 +180,7 @@
                     setForm({
                         pegawai_id: pegawai.id,
                         pegawai_data: pegawai,
-                        pasangan: pegawai.pasangan || [{ pasangan_ke: '1', nama: '', tanggal_lahir: '', pekerjaan: '', pekerjaan_lainnya: '' }],
+                        pasangan: pegawai.pasangan || [{ pasangan_ke: '1', nama: '', tanggal_lahir: '', pekerjaan: '', pekerjaan_lainnya: '', nik: '' }],
                         anak: pegawai.anak || [{ 
                             anak_ke: '1', 
                             nama: '', 
@@ -191,14 +191,15 @@
                             status_pendidikan_lainnya: '', 
                             tanggalPerpanjangan: '', 
                             keteranganPerpanjangan: '',
-                            pasanganId: null // untuk link ke pasangan
+                            pasanganId: null, // untuk link ke pasangan
+                            nik: ''
                         }]
                     });
                 } else {
                     setForm({
                         pegawai_id: '',
                         pegawai_data: null,
-                        pasangan: [{ pasangan_ke: '1', nama: '', tanggal_lahir: '', pekerjaan: '', pekerjaan_lainnya: '' }],
+                        pasangan: [{ pasangan_ke: '1', nama: '', tanggal_lahir: '', pekerjaan: '', pekerjaan_lainnya: '', nik: '' }],
                         anak: [{ 
                             anak_ke: '1', 
                             nama: '', 
@@ -209,7 +210,8 @@
                             status_pendidikan_lainnya: '', 
                             tanggalPerpanjangan: '', 
                             keteranganPerpanjangan: '',
-                            pasanganId: null 
+                            pasanganId: null,
+                            nik: ''
                         }]
                     });
                 }
@@ -223,7 +225,8 @@
                         nama: '',
                         tanggal_lahir: '',
                         pekerjaan: '',
-                        pekerjaan_lainnya: ''
+                        pekerjaan_lainnya: '',
+                        nik: ''
                     }]
                 }));
             };
@@ -256,7 +259,8 @@
                         status_pendidikan_lainnya: '',
                         tanggalPerpanjangan: '',
                         keteranganPerpanjangan: '',
-                        pasanganId: null
+                        pasanganId: null,
+                        nik: ''
                     }]
                 }));
             };
@@ -397,6 +401,7 @@
                                 'Kategori': 'Pasangan',
                                 'Ke': pasangan.pasangan_ke,
                                 'Nama': pasangan.nama,
+                                'NIK': pasangan.nik || '-',
                                 'Tanggal Lahir': pasangan.tanggal_lahir,
                                 'Usia': calculateAge(pasangan.tanggal_lahir),
                                 'Pekerjaan': pasangan.pekerjaan === 'Lainnya' ? pasangan.pekerjaan_lainnya : pasangan.pekerjaan,
@@ -422,6 +427,7 @@
                                 'Kategori': 'Anak',
                                 'Ke': anak.anak_ke,
                                 'Nama': anak.nama,
+                                'NIK': anak.nik || '-',
                                 'Pasangan': namaPasangan,
                                 'Tanggal Lahir': anak.tanggal_lahir,
                                 'Usia': usia,
@@ -445,7 +451,7 @@
             };
 
             const filteredData = useMemo(() => {
-                return listPegawai.filter(pegawai => {
+                return listPegawai.map(pegawai => {
                     let matchSearch = true;
                     if (debouncedSearch) {
                         const searchLower = debouncedSearch.toLowerCase();
@@ -455,27 +461,43 @@
                         );
                     }
 
-                    let matchStatus = true;
+                    let filteredPasangan = pegawai.pasangan || [];
+                    let filteredAnak = pegawai.anak || [];
+
                     if (statusFilter) {
-                        const hasBerlaku = pegawai.anak?.some(a => {
+                        filteredAnak = filteredAnak.filter(a => {
                             const usia = calculateAge(a.tanggal_lahir);
                             const berlaku = getStatusTunjangan(usia, a.tanggalPerpanjangan);
                             return (statusFilter === 'berlaku' && berlaku) ||
                                    (statusFilter === 'tidak' && !berlaku);
                         });
-                        const hasPasangan = pegawai.pasangan?.length > 0;
-                        matchStatus = statusFilter === 'berlaku' ? hasBerlaku : 
-                                      statusFilter === 'tidak' ? hasBerlaku || hasPasangan : true;
+                        // For status filter "tidak", still show pasangan
                     }
 
-                    let matchTunjangan = true;
                     if (tunjanganFilter) {
                         const tunjanganBool = tunjanganFilter === 'ya';
-                        matchTunjangan = pegawai.anak?.some(a => a.tunjangan === tunjanganBool);
+                        filteredAnak = filteredAnak.filter(a => a.tunjangan === tunjanganBool);
                     }
 
-                    return matchSearch && matchStatus && matchTunjangan;
-                });
+                    // If no filters, keep original pasangan/anak
+                    if (!statusFilter && !tunjanganFilter) {
+                        filteredPasangan = pegawai.pasangan || [];
+                        filteredAnak = pegawai.anak || [];
+                    }
+
+                    // Only include pegawai if they have matching search and (matching anak or pasangan when applicable)
+                    const hasMatchingData = matchSearch && 
+                        (filteredAnak.length > 0 || (statusFilter === 'tidak' && filteredPasangan.length > 0) || (!statusFilter && !tunjanganFilter));
+
+                    if (hasMatchingData) {
+                        return {
+                            ...pegawai,
+                            pasangan: filteredPasangan,
+                            anak: filteredAnak
+                        };
+                    }
+                    return null;
+                }).filter(Boolean); // Remove null entries
             }, [listPegawai, debouncedSearch, statusFilter, tunjanganFilter]);
 
             // Skeleton component for better UX
@@ -564,6 +586,7 @@
                                                     </button>
                                                 </div>
                                                 <p className="text-[13px] font-bold text-slate-900 mb-1 uppercase">{pasangan.nama || '-'}</p>
+                                                {pasangan.nik && <p className="text-[12px] text-slate-500 mb-1">NIK: {pasangan.nik}</p>}
                                                 <p className="text-[13px] text-slate-600 mb-0.5">Tgl Lahir: {formatDate(pasangan.tanggal_lahir)} <span className="font-semibold text-slate-700">({calculateAge(pasangan.tanggal_lahir)} thn)</span></p>
                                                 <p className="text-[13px] text-slate-600">Pekerjaan: {pasangan.pekerjaan === 'Lainnya' ? pasangan.pekerjaan_lainnya : pasangan.pekerjaan}</p>
                                             </div>
@@ -598,6 +621,7 @@
                                                     </button>
                                                 </div>
                                                 <p className="text-[13px] font-bold text-slate-900 mb-1 uppercase">{anak.nama || '-'}</p>
+                                                {anak.nik && <p className="text-[12px] text-slate-500 mb-1">NIK: {anak.nik}</p>}
                                                 <p className="text-[13px] text-slate-600 mb-0.5">Status: {anak.status_anak || '-'} • Pendidikan: {anak.status_pendidikan === 'Lainnya' ? anak.status_pendidikan_lainnya : anak.status_pendidikan}</p>
                                                 <p className="text-[13px] text-slate-600">Tgl Lahir: {formatDate(anak.tanggal_lahir)} <span className="font-semibold text-slate-700">({calculateAge(anak.tanggal_lahir)} thn)</span></p>
                                             </div>
@@ -730,9 +754,9 @@
                                     <thead className="bg-slate-100 border-b border-slate-300 text-[10px] font-black uppercase text-slate-700 tracking-wider">
                                         <tr>
                                             <th className="px-3 py-4 w-10 text-center border-r border-slate-200">No</th>
-                                            <th className="px-3 py-4 w-56 text-center border-r border-slate-200">Pegawai</th>
-                                            <th className="px-3 py-4 text-center border-r border-slate-200">Pasangan</th>
-                                            <th className="px-3 py-4 text-center border-r border-slate-200">Anak</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pegawai</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pasangan</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Anak</th>
                                             <th className="px-3 py-4 text-center w-40 border-r border-slate-200">Tunjangan Anak</th>
                                             <th className="px-3 py-4 text-center w-32 border-r border-slate-200">Tgl Perpanjangan</th>
                                             <th className="px-3 py-4 text-center w-48 border-r border-slate-200">Keterangan</th>
@@ -765,22 +789,24 @@
                     <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Users size={20} /></div>
-                            <div>
-                                <h2 className="text-[14px] font-black uppercase leading-tight">Data Keluarga</h2>
-                                <p className="text-[10px] text-slate-500 font-semibold">Total Pegawai: {filteredData.length}</p>
-                            </div>
+                            <h2 className="text-[14px] font-black uppercase leading-tight">Data Keluarga</h2>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
-                            <div className="relative">
-                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Cari nama Pegawai" 
-                                    className="pl-9 pr-3 py-2 bg-slate-100 rounded-lg w-48 outline-none border border-transparent focus:border-slate-950 transition-all font-bold uppercase text-[10px]"
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)} 
-                                    autoComplete="off"
-                                />
+                            <div className="relative flex items-center gap-2">
+                                <div className="bg-yellow-100 px-4 py-2 rounded-lg border border-yellow-200 shadow-sm">
+                                    <p className="text-[10px] text-yellow-900 font-black">Total Pegawai: {filteredData.length} • Total Anak: {filteredData.reduce((total, p) => total + (p.anak?.length || 0), 0)}</p>
+                                </div>
+                                <div className="relative">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Cari nama Pegawai" 
+                                        className="pl-9 pr-3 py-2 bg-slate-100 rounded-lg w-48 outline-none border border-transparent focus:border-slate-950 transition-all font-bold uppercase text-[10px]"
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)} 
+                                        autoComplete="off"
+                                    />
+                                </div>
                             </div>
                             <select 
                                 className="px-3 py-2 bg-slate-100 rounded-lg text-[10px] font-bold uppercase text-slate-600 outline-none border border-transparent focus:border-slate-950"
@@ -819,9 +845,9 @@
                                     <thead className="bg-slate-100 border-b border-slate-300 text-[10px] font-black uppercase text-slate-700 tracking-wider">
                                         <tr>
                                             <th className="px-3 py-4 w-10 text-center border-r border-slate-200">No</th>
-                                            <th className="px-3 py-4 w-56 text-center border-r border-slate-200">Pegawai</th>
-                                            <th className="px-3 py-4 text-center border-r border-slate-200">Pasangan</th>
-                                            <th className="px-3 py-4 text-center border-r border-slate-200">Anak</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pegawai</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Pasangan</th>
+                                            <th className="px-3 py-4 w-64 text-center border-r border-slate-200">Anak</th>
                                             <th className="px-3 py-4 text-center w-40 border-r border-slate-200">Tunjangan anak</th>
                                             <th className="px-3 py-4 text-center w-32 border-r border-slate-200">Tgl Perpanjangan</th>
                                             <th className="px-3 py-4 text-center w-48 border-r border-slate-200">Keterangan</th>
@@ -904,6 +930,23 @@
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
+                                                            <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">NIK</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={pasangan.nik} 
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                                                                    handleUpdatePasangan(idx, 'nik', value);
+                                                                }}
+                                                                maxLength={16}
+                                                                className={`w-full px-3 py-1.5 border rounded-md text-[11px] focus:outline-none ${pasangan.nik && pasangan.nik.length < 16 ? 'border-yellow-500 bg-yellow-50' : 'border-slate-200 focus:border-rose-500'}`}
+                                                                placeholder="Nomor Induk Kependudukan"
+                                                            />
+                                                            {pasangan.nik && pasangan.nik.length < 16 && (
+                                                                <p className="text-[10px] text-yellow-700 font-bold">NIK belum lengkap (harus 16 digit)</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-1">
                                                             <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Pekerjaan</label>
                                                             <select 
                                                                 value={pasangan.pekerjaan} 
@@ -980,6 +1023,23 @@
                                                                     className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-[11px] focus:outline-none focus:border-blue-500"
                                                                     placeholder="Nama lengkap"
                                                                 />
+                                                            </div>
+                                                            <div className="space-y-1 md:col-span-2">
+                                                                <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">NIK</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={anak.nik} 
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                                                                        handleUpdateAnak(idx, 'nik', value);
+                                                                    }}
+                                                                    maxLength={16}
+                                                                    className={`w-full px-3 py-1.5 border rounded-md text-[11px] focus:outline-none ${anak.nik && anak.nik.length < 16 ? 'border-yellow-500 bg-yellow-50' : 'border-slate-200 focus:border-blue-500'}`}
+                                                                    placeholder="Nomor Induk Kependudukan"
+                                                                />
+                                                                {anak.nik && anak.nik.length < 16 && (
+                                                                    <p className="text-[10px] text-yellow-700 font-bold">NIK belum lengkap (harus 16 digit)</p>
+                                                                )}
                                                             </div>
                                                             <div className="space-y-1">
                                                                 <label className="text-[9px] font-bold text-slate-500 uppercase px-0.5">Pasangan</label>
