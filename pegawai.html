@@ -20,9 +20,9 @@
 <body class="bg-slate-50">
     <div id="root"></div>
 
-    <!-- React and ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- React and ReactDOM (Production Version for Speed) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -105,6 +105,47 @@
             return age;
         };
 
+        // Convert base64 to File object
+        const base64ToFile = (base64, filename) => {
+            const arr = base64.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while(n--){
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, {type:mime});
+        };
+
+        // Upload foto ke Supabase Storage
+        const uploadPhotoToStorage = async (file, fileName) => {
+            try {
+                // Pastikan filename aman (tidak ada spasi atau karakter spesial)
+                const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+                const filePath = `pegawai/${Date.now()}_${safeFileName}`;
+                
+                const { data, error } = await supabaseClient.storage
+                    .from('foto_pegawai')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+                
+                if (error) throw error;
+                
+                // Dapatkan public URL
+                const { data: { publicUrl } } = supabaseClient.storage
+                    .from('foto_pegawai')
+                    .getPublicUrl(filePath);
+                
+                return publicUrl;
+            } catch (err) {
+                console.error("Upload Error:", err);
+                throw err;
+            }
+        };
+
         // --- MAIN COMPONENT ---
         function App() {
             const [activeTab, setActiveTab] = useState('history');
@@ -123,6 +164,8 @@
             const [pinInput, setPinInput] = useState('');
             const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
             const [isProcessing, setIsProcessing] = useState(false);
+            const [photoFile, setPhotoFile] = useState(null);
+            const [previewPhoto, setPreviewPhoto] = useState('');
 
             const initialForm = {
                 nama: '', nip: '', nik: '', tempat_lahir: '', tanggal_lahir: '', 
@@ -147,7 +190,7 @@
                 try {
                     const { data, error } = await supabaseClient
                         .from('data_pegawai')
-                        .select('*')
+                        .select('id, nama, nip, nik, tempat_lahir, tanggal_lahir, usia, jenis_kelamin, agama, pangkat, jabatan, status_kepegawaian, pendidikan, unit_kerja, alamat, no_hp, photo, order_index, is_locked')
                         .order('order_index', { ascending: true });
                     
                     if (error) throw error;
@@ -234,7 +277,11 @@
                 canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
                 const base64 = canvas.toDataURL('image/jpeg', 0.8);
                 stopCamera();
-                setForm({ ...form, photo: base64 });
+                
+                // Convert base64 ke File object
+                const file = base64ToFile(base64, `foto_${form.nama || Date.now()}.jpg`);
+                setPhotoFile(file);
+                setPreviewPhoto(base64);
                 showNotif("Foto berhasil diambil");
             };
 
@@ -246,9 +293,10 @@
             const handleFileUpload = (e) => {
                 const file = e.target.files[0];
                 if (file) {
+                    setPhotoFile(file);
                     const reader = new FileReader();
                     reader.onloadend = () => {
-                        setForm({ ...form, photo: reader.result });
+                        setPreviewPhoto(reader.result);
                         showNotif("Foto berhasil diunggah");
                     };
                     reader.readAsDataURL(file);
@@ -274,6 +322,20 @@
                     }
                 }
 
+                // Siapkan URL foto
+                let finalPhotoUrl = form.photo || '';
+
+                // Jika ada foto baru yang diupload, upload ke Storage terlebih dahulu
+                if (photoFile) {
+                    try {
+                        showNotif("Mengunggah foto...", "info");
+                        finalPhotoUrl = await uploadPhotoToStorage(photoFile, `foto_${form.nama || Date.now()}.jpg`);
+                    } catch (uploadErr) {
+                        console.error("Error upload foto:", uploadErr);
+                        return showNotif("Gagal mengunggah foto, silakan coba lagi", "error");
+                    }
+                }
+
                 // Konstruksi payload - Hindari menyertakan ID, created_at, updated_at dari form
                 const payload = {
                     nama: form.nama || '',
@@ -291,7 +353,7 @@
                     unit_kerja: form.unit_kerja || '',
                     alamat: form.alamat || '',
                     no_hp: form.no_hp || '',
-                    photo: form.photo || '',
+                    photo: finalPhotoUrl, // Simpan URL, bukan base64
                     is_locked: form.is_locked || false,
                     order_index: editId ? (form.order_index || 0) : listPegawai.length,
                     updated_at: new Date().toISOString()
@@ -318,6 +380,8 @@
                     
                     // Reset Form dan State
                     setForm(initialForm); 
+                    setPhotoFile(null);
+                    setPreviewPhoto('');
                     setEditId(null); 
                     setActiveTab('history');
                     fetchData();
@@ -338,6 +402,8 @@
                     showNotif(`Data ${targetNama} Berhasil Dihapus`);
                     setForm(initialForm);
                     setEditId(null);
+                    setPhotoFile(null);
+                    setPreviewPhoto('');
                     setActiveTab('history');
                     setPinModal({ show: false, type: '', payload: null });
                     setPinInput('');
@@ -437,6 +503,8 @@
                 if (found) {
                     setForm(found);
                     setEditId(found.id);
+                    setPreviewPhoto(found.photo || ''); // Set preview dari URL foto lama
+                    setPhotoFile(null);
                     showNotif(`Data ${found.nama} Ditemukan & Dimuat`);
                 } else {
                     showNotif("Pegawai tidak ditemukan", "info");
@@ -595,7 +663,13 @@
                         <div className="flex items-center gap-3">
                             <div className="bg-slate-100 p-1 rounded-2xl flex gap-1 shadow-inner border border-slate-200">
                                 <button 
-                                    onClick={() => { setActiveTab('input'); setEditId(null); setForm(initialForm); }} 
+                                    onClick={() => { 
+                                        setActiveTab('input'); 
+                                        setEditId(null); 
+                                        setForm(initialForm); 
+                                        setPhotoFile(null); 
+                                        setPreviewPhoto(''); 
+                                    }} 
                                     className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all duration-300 ${activeTab === 'input' ? 'bg-emerald-500 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-white/50'}`}
                                 >
                                     Input
@@ -803,7 +877,7 @@
                                                         <td className="px-4 py-4">
                                                             <div className="flex items-center gap-4">
                                                                 <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 relative">
-                                                                    {p.photo ? <img src={p.photo} className="w-full h-full object-cover" alt="" /> : <User size={20} className="m-auto mt-3 text-slate-300" />}
+                                                                {p.photo ? <img src={p.photo} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="" /> : <User size={20} className="m-auto mt-3 text-slate-300" />}
                                                                 </div>
                                                                 <div>
                                                                     <div className="flex items-center gap-2">
@@ -845,7 +919,11 @@
                                                                         if (p.is_locked) {
                                                                             showNotif("Data Terkunci. Buka kunci untuk mengedit.", "error");
                                                                         } else {
-                                                                            setForm(p); setEditId(p.id); setActiveTab('input');
+                                                                            setForm(p); 
+                                                                            setEditId(p.id); 
+                                                                            setActiveTab('input');
+                                                                            setPreviewPhoto(p.photo || '');
+                                                                            setPhotoFile(null);
                                                                         }
                                                                     }} 
                                                                     className={`p-2.5 rounded-xl transition-all shadow-sm ${p.is_locked ? 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white hover:border-slate-900'}`}
@@ -885,10 +963,17 @@
                                     <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm text-center">
                                         <div className="relative mx-auto w-56 h-56 group mb-6">
                                             <div className="w-full h-full bg-slate-50 rounded-[2.5rem] overflow-hidden border-2 border-slate-100 shadow-inner flex items-center justify-center">
-                                                {form.photo ? <img src={form.photo} className="w-full h-full object-cover" alt="" /> : <User size={80} className="text-slate-200" />}
+                                                {previewPhoto ? <img src={previewPhoto} className="w-full h-full object-cover" alt="" /> : <User size={80} className="text-slate-200" />}
                                             </div>
-                                            {form.photo && (
-                                                <button onClick={() => setForm({ ...form, photo: '' })} className="absolute -top-2 -right-2 p-2.5 bg-rose-600 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"><X size={16} /></button>
+                                            {previewPhoto && (
+                                                <button onClick={() => {
+                                                    setPreviewPhoto('');
+                                                    setPhotoFile(null);
+                                                    if (editId) {
+                                                        // Jika edit, tetap simpan foto lama jika dihapus
+                                                        setForm(prev => ({ ...prev, photo: '' }));
+                                                    }
+                                                }} className="absolute -top-2 -right-2 p-2.5 bg-rose-600 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"><X size={16} /></button>
                                             )}
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
@@ -1046,7 +1131,13 @@
                                             <button type="submit" className="flex-1 py-3.5 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg hover:bg-sky-600 transition-all flex items-center justify-center gap-2">
                                                 <Save size={16} /> {editId ? 'Perbarui Data' : 'Simpan Pegawai'}
                                             </button>
-                                            <button type="button" onClick={() => { setActiveTab('history'); setEditId(null); setForm(initialForm); }} className="px-6 py-3.5 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px] hover:bg-slate-200 transition-all">Batal</button>
+                                            <button type="button" onClick={() => { 
+                                                setActiveTab('history'); 
+                                                setEditId(null); 
+                                                setForm(initialForm); 
+                                                setPhotoFile(null);
+                                                setPreviewPhoto('');
+                                            }} className="px-6 py-3.5 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px] hover:bg-slate-200 transition-all">Batal</button>
                                         </div>
                                     </form>
                                 </div>
