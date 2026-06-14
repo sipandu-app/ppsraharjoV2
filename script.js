@@ -612,6 +612,11 @@ function showPage(pageId) {
                 <iframe src="./cetak_kartu.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
+        'form-informasi-sipandu': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./form_informasi_sipandu.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
         'statistik-pengunjung': `
             <div class="space-y-6">
                 <!-- Summary Stats -->
@@ -772,8 +777,8 @@ function applyMenuPermissionsByData(userData) {
         // Normalisasi ID (Menghilangkan suffix jika ada)
         if (pageId.includes('restore-json')) pageId = 'restore-json';
         
-        // Pengecualian: Ganti Password, Dashboard, dan APBD selalu aktif
-        if (pageId === 'ganti-password' || pageId === 'dashboard' || pageId === 'apbd') return;
+        // Pengecualian: Ganti Password, Dashboard, APBD, dan Form Informasi Sipandu selalu aktif
+        if (pageId === 'ganti-password' || pageId === 'dashboard' || pageId === 'apbd' || pageId === 'form-informasi-sipandu') return;
 
         // Jika ID halaman TIDAK ada dalam daftar 'access' di database (tidak dicentang)
         // Atau jika user belum login (Guest)
@@ -842,6 +847,92 @@ function applyMenuPermissionsByData(userData) {
     // Refresh icons untuk menampilkan ikon gembok yang baru ditambahkan
     if (window.lucide) window.lucide.createIcons();
 }
+
+// Functions for SIPANDU Info Modal
+async function showSipanduInfoModal() {
+    // Check if modal already shown in this session
+    if (sessionStorage.getItem('sipanduModalShown')) {
+        return;
+    }
+
+    const modal = document.getElementById('sipandu-info-modal');
+    const photoSection = document.getElementById('sipandu-info-photo');
+    const textSection = document.getElementById('sipandu-info-text');
+    const photoImg = document.getElementById('sipandu-photo-img');
+    const textContent = document.getElementById('sipandu-text-content');
+
+    try {
+        if (!supa) initSupabaseClient();
+        if (!supa) {
+            modal.classList.remove('hidden');
+            if (window.lucide) window.lucide.createIcons();
+            sessionStorage.setItem('sipanduModalShown', 'true');
+            return;
+        }
+
+        const { data, error } = await supa
+            .from('informasi_sipandu')
+            .select('*')
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        // Default values if no data
+        let showPhoto = true;
+        let showText = true;
+        let photoUrl = '';
+        let infoText = '';
+
+        if (data) {
+            showPhoto = data.show_photo ?? true;
+            showText = data.show_text ?? true;
+            photoUrl = data.photo_url ?? '';
+            infoText = data.info_text ?? '';
+        }
+
+        // Update UI
+        if (showPhoto && photoUrl) {
+            photoImg.src = photoUrl;
+            photoSection.classList.remove('hidden');
+        } else {
+            photoSection.classList.add('hidden');
+        }
+
+        if (showText && infoText) {
+            // Process text: add 3 spaces to lines not starting with a number
+            const processedText = infoText.split('\n').map(line => {
+                if (/^\d/.test(line.trim())) {
+                    return line;
+                }
+                return '   ' + line;
+            }).join('\n');
+            
+            textContent.innerText = processedText;
+            textSection.classList.remove('hidden');
+        } else {
+            textSection.classList.add('hidden');
+        }
+
+        // Only show modal if at least one section is visible
+        if (showPhoto || showText) {
+            modal.classList.remove('hidden');
+            sessionStorage.setItem('sipanduModalShown', 'true');
+            if (window.lucide) window.lucide.createIcons();
+        }
+    } catch (err) {
+        console.error('Error showing SIPANDU info modal:', err);
+    }
+}
+
+function closeSipanduInfoModal() {
+    const modal = document.getElementById('sipandu-info-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Make functions globally available for inline handlers
+window.closeSipanduInfoModal = closeSipanduInfoModal;
 
 function handleLogin() {
     const usernameInput = document.getElementById('username-input');
@@ -935,6 +1026,9 @@ function handleLogin() {
                 // Terapkan izin menu berdasarkan role dan daftar akses spesifik
                 applyMenuPermissionsByData(data);
                 showPage('dashboard');
+                
+                // Show SIPANDU info modal
+                showSipanduInfoModal();
 
                 // Set auto logout 24 Jam
                 setTimeout(() => {
@@ -1075,6 +1169,7 @@ function confirmLogout() {
     localStorage.removeItem('sipandu_loginTime');
     localStorage.removeItem('sipandu_userAccess');
     localStorage.removeItem('sipandu_pin');
+    sessionStorage.removeItem('sipanduModalShown');
 
     // Langsung arahkan ke index.html untuk reset total
     window.location.href = 'index.html';
@@ -1088,6 +1183,7 @@ function handleLogoutSessionExpired() {
     localStorage.removeItem('sipandu_loginTime');
     localStorage.removeItem('sipandu_userAccess');
     localStorage.removeItem('sipandu_pin');
+    sessionStorage.removeItem('sipanduModalShown');
 
     // Langsung arahkan ke index.html untuk reset total
     window.location.href = 'index.html';
@@ -1143,6 +1239,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProfileUI(savedName, savedRole);
         applyMenuPermissionsByData({ role: savedRole, access: currentUserAccess });
         showPage('dashboard');
+        
+        // Show SIPANDU info modal on auto-login
+        showSipanduInfoModal();
     } else {
         // Belum login, tampilkan semua menu tapi DISABLED
         applyMenuPermissionsByData(null);
