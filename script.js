@@ -990,12 +990,10 @@ async function showSipanduInfoModal() {
             textSection.classList.add('hidden');
         }
 
-        // Only show modal if at least one section is visible
-        if (showPhoto || showText) {
-            modal.classList.remove('hidden');
-            sessionStorage.setItem('sipanduModalShown', 'true');
-            if (window.lucide) window.lucide.createIcons();
-        }
+        // Show modal regardless of content
+        modal.classList.remove('hidden');
+        sessionStorage.setItem('sipanduModalShown', 'true');
+        if (window.lucide) window.lucide.createIcons();
     } catch (err) {
         console.error('Error showing SIPANDU info modal:', err);
     }
