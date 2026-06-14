@@ -318,6 +318,11 @@ function showPage(pageId) {
                 <iframe src="./KP_KGB.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
+        'data_keluarga': `
+            <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+                <iframe src="./data_keluarga.html" class="w-full h-full border-none"></iframe>
+            </div>
+        `,
         'pendidikan': `
             <div class="w-full h-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
                 <iframe src="./pendidikan.html" class="w-full h-full border-none"></iframe>
