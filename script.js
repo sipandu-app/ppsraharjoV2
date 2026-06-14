@@ -619,7 +619,6 @@ function showPage(pageId) {
         `,
         'statistik-pengunjung': `
             <div class="space-y-6">
-                <!-- Summary Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2">
                         <div class="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-500">
@@ -644,31 +643,9 @@ function showPage(pageId) {
                     </div>
                 </div>
 
-                <!-- Top 5 Pegawai Terbanyak -->
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-slate-100">
-                        <h3 class="text-lg font-black text-slate-800">Top 5 Pegawai Paling Sering Mengakses</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/50">
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peringkat</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Pegawai</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Kunjungan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="top-visitors-table-body">
-                                <!-- Data will be injected here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Kunjungan 1 Bulan Terakhir -->
                 <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-                        <h3 class="text-lg font-black text-slate-800">Kunjungan 1 Bulan Terakhir</h3>
+                        <h3 class="text-lg font-black text-slate-800">Aktivitas Login Terakhir</h3>
                         <button onclick="clearVisitorStats()" class="text-[10px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest">Hapus Data</button>
                     </div>
                     <div class="overflow-x-auto">
@@ -676,12 +653,12 @@ function showPage(pageId) {
                             <thead>
                                 <tr class="bg-slate-50/50">
                                     <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">No</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Pegawai</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Halaman Diakses</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role / Pengguna</th>
                                     <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu Akses</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                                 </tr>
                             </thead>
-                            <tbody id="page-visits-table-body">
+                            <tbody id="recent-logins-table-body">
                                 <!-- Data will be injected here -->
                             </tbody>
                         </table>
@@ -694,39 +671,8 @@ function showPage(pageId) {
     const content = pageContents[pageId] || '<div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm"><h3 class="text-xl font-black mb-4">Halaman Tidak Ditemukan</h3><p class="text-slate-600">Konten untuk halaman ini belum tersedia.</p></div>';
     document.getElementById('page-content').innerHTML = content;
 
-    // Log kunjungan halaman (jika user sudah login)
-    if (currentUserRole !== 'Guest') {
-        const employeeName = localStorage.getItem('sipandu_userName') || 'Unknown';
-        let stats;
-        try {
-            stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
-                totalVisits: 0,
-                roleVisits: {},
-                recentLogins: [],
-                pageVisits: [] // new field for page visit logs
-            };
-        } catch (e) {
-            stats = {
-                totalVisits: 0,
-                roleVisits: {},
-                recentLogins: [],
-                pageVisits: []
-            };
-        }
-        
-        // Add new page visit
-        stats.pageVisits.push({
-            employeeName: employeeName,
-            pageId: pageId,
-            timestamp: new Date().toISOString()
-        });
-        
-        localStorage.setItem('visitor_stats', JSON.stringify(stats));
-    }
-
     if (window.innerWidth < 1024) toggleSidebar();
     if (pageId === 'mutasi-pm') initMutasiForm();
-    if (pageId === 'statistik-pengunjung') renderVisitorStats();
     initIcons();
 }
 
@@ -736,15 +682,13 @@ function renderVisitorStats() {
         stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: [],
-            pageVisits: []
+            recentLogins: []
         };
     } catch (e) {
         stats = {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: [],
-            pageVisits: []
+            recentLogins: []
         };
     }
 
@@ -762,51 +706,27 @@ function renderVisitorStats() {
 
     if (userEl) userEl.innerText = stats.roleVisits['User'] || 0;
 
-    // Filter visits from last 1 month
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    const filteredVisits = (stats.pageVisits || []).filter(visit => 
-        new Date(visit.timestamp) >= oneMonthAgo
-    ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    // Calculate top 5 visitors
-    const visitorCounts = {};
-    filteredVisits.forEach(visit => {
-        const name = visit.employeeName;
-        visitorCounts[name] = (visitorCounts[name] || 0) + 1;
-    });
-    const sortedVisitors = Object.entries(visitorCounts)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5);
-
-    // Update Top 5 Table
-    const topVisitorsBody = document.getElementById('top-visitors-table-body');
-    if (topVisitorsBody) {
-        if (sortedVisitors.length === 0) {
-            topVisitorsBody.innerHTML = `<tr><td colspan="3" class="px-6 py-12 text-center text-slate-400 font-medium">Belum ada data.</td></tr>`;
+    // Update Table
+    const tableBody = document.getElementById('recent-logins-table-body');
+    if (tableBody) {
+        if (stats.recentLogins.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-slate-400 font-medium">Belum ada data aktivitas.</td></tr>`;
         } else {
-            topVisitorsBody.innerHTML = sortedVisitors.map(([name, count], index) => `
-                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td class="px-6 py-4 text-sm font-black ${index < 3 ? 'text-amber-500' : 'text-slate-400'}">${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}</td>
-                    <td class="px-6 py-4 text-sm font-bold text-slate-700">${name}</td>
-                    <td class="px-6 py-4 text-sm font-black text-sky-600">${count} kali</td>
-                </tr>
-            `).join('');
-        }
-    }
-
-    // Update Page Visits Table
-    const pageVisitsBody = document.getElementById('page-visits-table-body');
-    if (pageVisitsBody) {
-        if (filteredVisits.length === 0) {
-            pageVisitsBody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-slate-400 font-medium">Belum ada data kunjungan.</td></tr>`;
-        } else {
-            pageVisitsBody.innerHTML = filteredVisits.map((visit, index) => `
+            tableBody.innerHTML = stats.recentLogins.map((login, index) => `
                 <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                     <td class="px-6 py-4 text-sm font-bold text-slate-400">${index + 1}</td>
-                    <td class="px-6 py-4 text-sm font-bold text-slate-700">${visit.employeeName}</td>
-                    <td class="px-6 py-4 text-sm text-slate-500 font-medium capitalize">${visit.pageId.replace(/-/g, ' ')}</td>
-                    <td class="px-6 py-4 text-sm text-slate-500 font-medium">${new Date(visit.timestamp).toLocaleString('id-ID')}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-500 font-bold text-xs">
+                                ${login.role.charAt(0)}
+                            </div>
+                            <span class="text-sm font-bold text-slate-700">${login.role}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500 font-medium">${login.time}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-lg">Success</span>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -933,8 +853,6 @@ async function showSipanduInfoModal() {
     }
 
     const modal = document.getElementById('sipandu-info-modal');
-    if (!modal) return;
-    
     const photoSection = document.getElementById('sipandu-info-photo');
     const textSection = document.getElementById('sipandu-info-text');
     const photoImg = document.getElementById('sipandu-photo-img');
@@ -942,64 +860,56 @@ async function showSipanduInfoModal() {
 
     try {
         if (!supa) initSupabaseClient();
-        
-        // Default values
+        if (!supa) {
+            modal.classList.remove('hidden');
+            if (window.lucide) window.lucide.createIcons();
+            sessionStorage.setItem('sipanduModalShown', 'true');
+            return;
+        }
+
+        const { data, error } = await supa
+            .from('informasi_sipandu')
+            .select('*')
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        // Default values if no data
         let showPhoto = true;
         let showText = true;
         let photoUrl = '';
         let infoText = '';
 
-        if (supa) {
-            const { data, error } = await supa
-                .from('informasi_sipandu')
-                .select('*')
-                .single();
-
-            if (data) {
-                showPhoto = data.show_photo ?? true;
-                showText = data.show_text ?? true;
-                photoUrl = data.photo_url ?? '';
-                infoText = data.info_text ?? '';
-            }
+        if (data) {
+            showPhoto = data.show_photo ?? true;
+            showText = data.show_text ?? true;
+            photoUrl = data.photo_url ?? '';
+            infoText = data.info_text ?? '';
         }
 
         // Update UI
-        if (photoSection) {
-            if (showPhoto && photoUrl) {
-                if (photoImg) photoImg.src = photoUrl;
-                photoSection.classList.remove('hidden');
-            } else {
-                photoSection.classList.add('hidden');
-            }
+        if (showPhoto && photoUrl) {
+            photoImg.src = photoUrl;
+            photoSection.classList.remove('hidden');
+        } else {
+            photoSection.classList.add('hidden');
         }
 
-        if (textSection) {
-            if (showText && infoText) {
-                // Process text: add 3 spaces to lines not starting with a number
-                const processedText = infoText.split('\n').map(line => {
-                    if (/^\d/.test(line.trim())) {
-                        return line;
-                    }
-                    return '   ' + line;
-                }).join('\n');
-                
-                if (textContent) textContent.innerText = processedText;
-                textSection.classList.remove('hidden');
-            } else {
-                textSection.classList.add('hidden');
-            }
+        if (showText && infoText) {
+            textContent.innerText = infoText;
+            textSection.classList.remove('hidden');
+        } else {
+            textSection.classList.add('hidden');
         }
 
-        // Show modal
-        modal.classList.remove('hidden');
-        sessionStorage.setItem('sipanduModalShown', 'true');
-        if (window.lucide) window.lucide.createIcons();
+        // Only show modal if at least one section is visible
+        if (showPhoto || showText) {
+            modal.classList.remove('hidden');
+            sessionStorage.setItem('sipanduModalShown', 'true');
+            if (window.lucide) window.lucide.createIcons();
+        }
     } catch (err) {
         console.error('Error showing SIPANDU info modal:', err);
-        // Show modal even if there's an error
-        modal.classList.remove('hidden');
-        sessionStorage.setItem('sipanduModalShown', 'true');
-        if (window.lucide) window.lucide.createIcons();
     }
 }
 
@@ -1106,10 +1016,8 @@ function handleLogin() {
                 applyMenuPermissionsByData(data);
                 showPage('dashboard');
                 
-                // Show SIPANDU info modal (with small delay to ensure DOM is ready)
-                setTimeout(() => {
-                    showSipanduInfoModal();
-                }, 100);
+                // Show SIPANDU info modal
+                showSipanduInfoModal();
 
                 // Set auto logout 24 Jam
                 setTimeout(() => {
@@ -1183,15 +1091,13 @@ function trackVisitor(role) {
         stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: [],
-            pageVisits: []
+            recentLogins: []
         };
     } catch (e) {
         stats = {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: [],
-            pageVisits: []
+            recentLogins: []
         };
     }
 
@@ -1323,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         applyMenuPermissionsByData({ role: savedRole, access: currentUserAccess });
         showPage('dashboard');
         
-        // Show SIPANDU info modal on auto-login
+        // Show SIPANDU info modal
         showSipanduInfoModal();
     } else {
         // Belum login, tampilkan semua menu tapi DISABLED
