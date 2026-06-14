@@ -109,7 +109,7 @@
             const [filterMonthStart, setFilterMonthStart] = useState(''); 
             const [filterMonthEnd, setFilterMonthEnd] = useState('');     
 
-            const [sortConfig] = useState({ key: 'updated_at', direction: 'desc' });
+            const [sortConfig] = useState({ key: 'nomor_bp', direction: 'asc' });
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [uploadingIdx, setUploadingIdx] = useState(null);
             const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -175,8 +175,7 @@
                     const { data, error } = await supabaseClient
                         .from(tableName)
                         .select('*')
-                        .order('nomor_bp', { ascending: false, nullsFirst: false })
-                        .order('tanggal_belanja', { ascending: false });
+                        .order('nomor_bp', { ascending: true, nullsFirst: false });
                     
                     if (error) {
                         console.error("Supabase Error:", error);
@@ -236,6 +235,13 @@
                 });
 
                 result.sort((a, b) => {
+                    if (sortConfig.key === 'nomor_bp') {
+                        const numA = parseFloat(a.nomor_bp) || 0;
+                        const numB = parseFloat(b.nomor_bp) || 0;
+                        if (numA !== numB) {
+                            return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+                        }
+                    }
                     const valA = a[sortConfig.key] || 0;
                     const valB = b[sortConfig.key] || 0;
                     if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
