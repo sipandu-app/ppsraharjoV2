@@ -933,6 +933,8 @@ async function showSipanduInfoModal() {
     }
 
     const modal = document.getElementById('sipandu-info-modal');
+    if (!modal) return;
+    
     const photoSection = document.getElementById('sipandu-info-photo');
     const textSection = document.getElementById('sipandu-info-text');
     const photoImg = document.getElementById('sipandu-photo-img');
@@ -940,62 +942,64 @@ async function showSipanduInfoModal() {
 
     try {
         if (!supa) initSupabaseClient();
-        if (!supa) {
-            modal.classList.remove('hidden');
-            if (window.lucide) window.lucide.createIcons();
-            sessionStorage.setItem('sipanduModalShown', 'true');
-            return;
-        }
-
-        const { data, error } = await supa
-            .from('informasi_sipandu')
-            .select('*')
-            .single();
-
-        if (error && error.code !== 'PGRST116') throw error;
-
-        // Default values if no data
+        
+        // Default values
         let showPhoto = true;
         let showText = true;
         let photoUrl = '';
         let infoText = '';
 
-        if (data) {
-            showPhoto = data.show_photo ?? true;
-            showText = data.show_text ?? true;
-            photoUrl = data.photo_url ?? '';
-            infoText = data.info_text ?? '';
+        if (supa) {
+            const { data, error } = await supa
+                .from('informasi_sipandu')
+                .select('*')
+                .single();
+
+            if (data) {
+                showPhoto = data.show_photo ?? true;
+                showText = data.show_text ?? true;
+                photoUrl = data.photo_url ?? '';
+                infoText = data.info_text ?? '';
+            }
         }
 
         // Update UI
-        if (showPhoto && photoUrl) {
-            photoImg.src = photoUrl;
-            photoSection.classList.remove('hidden');
-        } else {
-            photoSection.classList.add('hidden');
+        if (photoSection) {
+            if (showPhoto && photoUrl) {
+                if (photoImg) photoImg.src = photoUrl;
+                photoSection.classList.remove('hidden');
+            } else {
+                photoSection.classList.add('hidden');
+            }
         }
 
-        if (showText && infoText) {
-            // Process text: add 3 spaces to lines not starting with a number
-            const processedText = infoText.split('\n').map(line => {
-                if (/^\d/.test(line.trim())) {
-                    return line;
-                }
-                return '   ' + line;
-            }).join('\n');
-            
-            textContent.innerText = processedText;
-            textSection.classList.remove('hidden');
-        } else {
-            textSection.classList.add('hidden');
+        if (textSection) {
+            if (showText && infoText) {
+                // Process text: add 3 spaces to lines not starting with a number
+                const processedText = infoText.split('\n').map(line => {
+                    if (/^\d/.test(line.trim())) {
+                        return line;
+                    }
+                    return '   ' + line;
+                }).join('\n');
+                
+                if (textContent) textContent.innerText = processedText;
+                textSection.classList.remove('hidden');
+            } else {
+                textSection.classList.add('hidden');
+            }
         }
 
-        // Show modal regardless of content
+        // Show modal
         modal.classList.remove('hidden');
         sessionStorage.setItem('sipanduModalShown', 'true');
         if (window.lucide) window.lucide.createIcons();
     } catch (err) {
         console.error('Error showing SIPANDU info modal:', err);
+        // Show modal even if there's an error
+        modal.classList.remove('hidden');
+        sessionStorage.setItem('sipanduModalShown', 'true');
+        if (window.lucide) window.lucide.createIcons();
     }
 }
 
@@ -1102,8 +1106,10 @@ function handleLogin() {
                 applyMenuPermissionsByData(data);
                 showPage('dashboard');
                 
-                // Show SIPANDU info modal
-                showSipanduInfoModal();
+                // Show SIPANDU info modal (with small delay to ensure DOM is ready)
+                setTimeout(() => {
+                    showSipanduInfoModal();
+                }, 100);
 
                 // Set auto logout 24 Jam
                 setTimeout(() => {
@@ -1177,13 +1183,15 @@ function trackVisitor(role) {
         stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: []
+            recentLogins: [],
+            pageVisits: []
         };
     } catch (e) {
         stats = {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: []
+            recentLogins: [],
+            pageVisits: []
         };
     }
 
