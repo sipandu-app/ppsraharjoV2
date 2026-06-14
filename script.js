@@ -644,10 +644,31 @@ function showPage(pageId) {
                     </div>
                 </div>
 
-                <!-- Recent Activity Table -->
+                <!-- Top 5 Pegawai Terbanyak -->
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-100">
+                        <h3 class="text-lg font-black text-slate-800">Top 5 Pegawai Paling Sering Mengakses</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50/50">
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peringkat</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Pegawai</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Kunjungan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top-visitors-table-body">
+                                <!-- Data will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Kunjungan 1 Bulan Terakhir -->
                 <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-                        <h3 class="text-lg font-black text-slate-800">Aktivitas Login Terakhir</h3>
+                        <h3 class="text-lg font-black text-slate-800">Kunjungan 1 Bulan Terakhir</h3>
                         <button onclick="clearVisitorStats()" class="text-[10px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest">Hapus Data</button>
                     </div>
                     <div class="overflow-x-auto">
@@ -655,12 +676,12 @@ function showPage(pageId) {
                             <thead>
                                 <tr class="bg-slate-50/50">
                                     <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">No</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role / Pengguna</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Pegawai</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Halaman Diakses</th>
                                     <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu Akses</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                                 </tr>
                             </thead>
-                            <tbody id="recent-logins-table-body">
+                            <tbody id="page-visits-table-body">
                                 <!-- Data will be injected here -->
                             </tbody>
                         </table>
@@ -672,6 +693,36 @@ function showPage(pageId) {
 
     const content = pageContents[pageId] || '<div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm"><h3 class="text-xl font-black mb-4">Halaman Tidak Ditemukan</h3><p class="text-slate-600">Konten untuk halaman ini belum tersedia.</p></div>';
     document.getElementById('page-content').innerHTML = content;
+
+    // Log kunjungan halaman (jika user sudah login)
+    if (currentUserRole !== 'Guest') {
+        const employeeName = localStorage.getItem('sipandu_userName') || 'Unknown';
+        let stats;
+        try {
+            stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
+                totalVisits: 0,
+                roleVisits: {},
+                recentLogins: [],
+                pageVisits: [] // new field for page visit logs
+            };
+        } catch (e) {
+            stats = {
+                totalVisits: 0,
+                roleVisits: {},
+                recentLogins: [],
+                pageVisits: []
+            };
+        }
+        
+        // Add new page visit
+        stats.pageVisits.push({
+            employeeName: employeeName,
+            pageId: pageId,
+            timestamp: new Date().toISOString()
+        });
+        
+        localStorage.setItem('visitor_stats', JSON.stringify(stats));
+    }
 
     if (window.innerWidth < 1024) toggleSidebar();
     if (pageId === 'mutasi-pm') initMutasiForm();
@@ -685,13 +736,15 @@ function renderVisitorStats() {
         stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: []
+            recentLogins: [],
+            pageVisits: []
         };
     } catch (e) {
         stats = {
             totalVisits: 0,
             roleVisits: {},
-            recentLogins: []
+            recentLogins: [],
+            pageVisits: []
         };
     }
 
@@ -709,27 +762,51 @@ function renderVisitorStats() {
 
     if (userEl) userEl.innerText = stats.roleVisits['User'] || 0;
 
-    // Update Table
-    const tableBody = document.getElementById('recent-logins-table-body');
-    if (tableBody) {
-        if (stats.recentLogins.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-slate-400 font-medium">Belum ada data aktivitas.</td></tr>`;
+    // Filter visits from last 1 month
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const filteredVisits = (stats.pageVisits || []).filter(visit => 
+        new Date(visit.timestamp) >= oneMonthAgo
+    ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // Calculate top 5 visitors
+    const visitorCounts = {};
+    filteredVisits.forEach(visit => {
+        const name = visit.employeeName;
+        visitorCounts[name] = (visitorCounts[name] || 0) + 1;
+    });
+    const sortedVisitors = Object.entries(visitorCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5);
+
+    // Update Top 5 Table
+    const topVisitorsBody = document.getElementById('top-visitors-table-body');
+    if (topVisitorsBody) {
+        if (sortedVisitors.length === 0) {
+            topVisitorsBody.innerHTML = `<tr><td colspan="3" class="px-6 py-12 text-center text-slate-400 font-medium">Belum ada data.</td></tr>`;
         } else {
-            tableBody.innerHTML = stats.recentLogins.map((login, index) => `
+            topVisitorsBody.innerHTML = sortedVisitors.map(([name, count], index) => `
+                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                    <td class="px-6 py-4 text-sm font-black ${index < 3 ? 'text-amber-500' : 'text-slate-400'}">${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}</td>
+                    <td class="px-6 py-4 text-sm font-bold text-slate-700">${name}</td>
+                    <td class="px-6 py-4 text-sm font-black text-sky-600">${count} kali</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    // Update Page Visits Table
+    const pageVisitsBody = document.getElementById('page-visits-table-body');
+    if (pageVisitsBody) {
+        if (filteredVisits.length === 0) {
+            pageVisitsBody.innerHTML = `<tr><td colspan="4" class="px-6 py-12 text-center text-slate-400 font-medium">Belum ada data kunjungan.</td></tr>`;
+        } else {
+            pageVisitsBody.innerHTML = filteredVisits.map((visit, index) => `
                 <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                     <td class="px-6 py-4 text-sm font-bold text-slate-400">${index + 1}</td>
-                    <td class="px-6 py-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-500 font-bold text-xs">
-                                ${login.role.charAt(0)}
-                            </div>
-                            <span class="text-sm font-bold text-slate-700">${login.role}</span>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 text-sm text-slate-500 font-medium">${login.time}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-lg">Success</span>
-                    </td>
+                    <td class="px-6 py-4 text-sm font-bold text-slate-700">${visit.employeeName}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500 font-medium capitalize">${visit.pageId.replace(/-/g, ' ')}</td>
+                    <td class="px-6 py-4 text-sm text-slate-500 font-medium">${new Date(visit.timestamp).toLocaleString('id-ID')}</td>
                 </tr>
             `).join('');
         }
