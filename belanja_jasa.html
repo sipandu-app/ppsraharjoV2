@@ -312,7 +312,7 @@
                 const { data, error } = await supabaseClient
                     .from(TABLE_NAME)
                     .select('*')
-                    .order('tanggal_pekerjaan', { ascending: false });
+                    .order('nomor_bp', { ascending: false, nullsFirst: false });
 
                 if (error) throw error;
                 listJasa = data || [];

@@ -109,7 +109,7 @@
             const [filterMonthStart, setFilterMonthStart] = useState(''); 
             const [filterMonthEnd, setFilterMonthEnd] = useState('');     
 
-            const [sortConfig] = useState({ key: 'nomor_bp', direction: 'asc' });
+            const [sortConfig] = useState({ key: 'nomor_bp', direction: 'desc' });
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [uploadingIdx, setUploadingIdx] = useState(null);
             const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -175,7 +175,7 @@
                     const { data, error } = await supabaseClient
                         .from(tableName)
                         .select('*')
-                        .order('nomor_bp', { ascending: true, nullsFirst: false });
+                        .order('nomor_bp', { ascending: false, nullsFirst: false });
                     
                     if (error) {
                         console.error("Supabase Error:", error);
