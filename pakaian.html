@@ -104,7 +104,7 @@
             const [filterUnit, setFilterUnit] = useState('Semua');
             const [filterStartMonth, setFilterStartMonth] = useState('');
             const [filterEndMonth, setFilterEndMonth] = useState('');
-            const [sortConfig, setSortConfig] = useState({ key: 'nomor_bp', direction: 'asc' });
+            const [sortConfig, setSortConfig] = useState({ key: 'nomor_bp', direction: 'desc' });
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [uploadingIdx, setUploadingIdx] = useState(null);
             const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -168,7 +168,7 @@
                     const { data, error } = await supabaseClient
                         .from('pakaian')
                         .select('*')
-                        .order('nomor_bp', { ascending: true, nullsFirst: false });
+                        .order('nomor_bp', { ascending: false, nullsFirst: false });
                     
                     if (error) {
                         console.error("Supabase Error:", error);
