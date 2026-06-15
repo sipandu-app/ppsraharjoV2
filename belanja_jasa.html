@@ -311,8 +311,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from(TABLE_NAME)
-                    .select('*')
-                    .order('nomor_bp', { ascending: false, nullsFirst: false });
+                    .select('*');
 
                 if (error) throw error;
                 listJasa = data || [];
@@ -331,11 +330,24 @@
             const unit = document.getElementById('filterUnit').value;
             const jasa = document.getElementById('filterJasa').value;
 
-            const filtered = listJasa.filter(item => {
+            let filtered = listJasa.filter(item => {
                 const matchSearch = item.nama_pekerjaan.toLowerCase().includes(search) || item.nama_rekanan.toLowerCase().includes(search);
                 const matchUnit = unit === 'Semua' || item.unit_pelayanan === unit;
                 const matchJasa = jasa === 'Semua' || item.jenis_jasa === jasa;
                 return matchSearch && matchUnit && matchJasa;
+            });
+
+            // Client-side sorting by nomor_bp descending, fallback to tanggal_pekerjaan
+            filtered.sort((a, b) => {
+                const nomorA = a.nomor_bp || '';
+                const nomorB = b.nomor_bp || '';
+                if (nomorA && nomorB) {
+                    return nomorB.localeCompare(nomorA);
+                }
+                if (nomorA) return -1;
+                if (nomorB) return 1;
+                // Fallback: jika tidak ada nomor_bp, urutkan tanggal_pekerjaan descending
+                return (b.tanggal_pekerjaan || '').localeCompare(a.tanggal_pekerjaan || '');
             });
 
             tbody.innerHTML = '';
