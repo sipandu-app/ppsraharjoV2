@@ -619,6 +619,7 @@ function showPage(pageId) {
         `,
         'statistik-pengunjung': `
             <div class="space-y-6">
+                <!-- Summary Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2">
                         <div class="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-500">
@@ -643,6 +644,7 @@ function showPage(pageId) {
                     </div>
                 </div>
 
+                <!-- Recent Activity Table -->
                 <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="p-6 border-b border-slate-100 flex items-center justify-between">
                         <h3 class="text-lg font-black text-slate-800">Aktivitas Login Terakhir</h3>
@@ -673,6 +675,7 @@ function showPage(pageId) {
 
     if (window.innerWidth < 1024) toggleSidebar();
     if (pageId === 'mutasi-pm') initMutasiForm();
+    if (pageId === 'statistik-pengunjung') renderVisitorStats();
     initIcons();
 }
 
@@ -896,7 +899,15 @@ async function showSipanduInfoModal() {
         }
 
         if (showText && infoText) {
-            textContent.innerText = infoText;
+            // Process text: add 3 spaces to lines not starting with a number
+            const processedText = infoText.split('\n').map(line => {
+                if (/^\d/.test(line.trim())) {
+                    return line;
+                }
+                return '   ' + line;
+            }).join('\n');
+            
+            textContent.innerText = processedText;
             textSection.classList.remove('hidden');
         } else {
             textSection.classList.add('hidden');
@@ -1229,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         applyMenuPermissionsByData({ role: savedRole, access: currentUserAccess });
         showPage('dashboard');
         
-        // Show SIPANDU info modal
+        // Show SIPANDU info modal on auto-login
         showSipanduInfoModal();
     } else {
         // Belum login, tampilkan semua menu tapi DISABLED
