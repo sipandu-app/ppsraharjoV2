@@ -117,9 +117,6 @@ function showPage(pageId) {
         }
     }
 
-    // Track page visit
-    trackPageVisit(pageId);
-
     // Konten dinamis untuk setiap halaman
     const pageContents = {
         'dashboard': `
@@ -620,119 +617,6 @@ function showPage(pageId) {
                 <iframe src="./form_informasi_sipandu.html" class="w-full h-full border-none"></iframe>
             </div>
         `,
-        'statistik-pengunjung': `
-            <div class="space-y-6">
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-gradient-to-br from-sky-500 to-indigo-600 p-6 rounded-3xl shadow-xl shadow-sky-200 text-white space-y-4">
-                        <div class="flex items-center justify-between">
-                            <div class="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
-                                <i data-lucide="users" class="w-7 h-7"></i>
-                            </div>
-                            <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                                <i data-lucide="trending-up" class="w-5 h-5"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-sky-100 text-xs font-bold uppercase tracking-widest mb-1">Total Aktivitas</p>
-                            <h4 id="stat-total-visits" class="text-4xl font-black">0</h4>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-3xl shadow-xl shadow-emerald-200 text-white space-y-4">
-                        <div class="flex items-center justify-between">
-                            <div class="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
-                                <i data-lucide="shield-check" class="w-7 h-7"></i>
-                            </div>
-                            <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                                <i data-lucide="log-in" class="w-5 h-5"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1">Login Terdaftar</p>
-                            <h4 id="stat-admin-visits" class="text-4xl font-black">0</h4>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-3xl shadow-xl shadow-amber-200 text-white space-y-4">
-                        <div class="flex items-center justify-between">
-                            <div class="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
-                                <i data-lucide="file-text" class="w-7 h-7"></i>
-                            </div>
-                            <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                                <i data-lucide="navigation" class="w-5 h-5"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-amber-100 text-xs font-bold uppercase tracking-widest mb-1">Kunjungan Halaman</p>
-                            <h4 id="stat-user-visits" class="text-4xl font-black">0</h4>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Delete Section -->
-                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-lg shadow-slate-100 space-y-4">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500">
-                            <i data-lucide="filter" class="w-5 h-5"></i>
-                        </div>
-                        <h3 class="text-lg font-black text-slate-800">Filter & Hapus Data</h3>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                                <i data-lucide="calendar" class="w-3 h-3"></i>
-                                Tanggal Mulai
-                            </label>
-                            <input type="date" id="delete-date-start" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none transition-all text-sm font-bold text-slate-700">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                                <i data-lucide="calendar" class="w-3 h-3"></i>
-                                Tanggal Akhir
-                            </label>
-                            <input type="date" id="delete-date-end" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none transition-all text-sm font-bold text-slate-700">
-                        </div>
-                        <button onclick="deleteVisitorLogsByDate()" class="w-full p-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-rose-200 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            Hapus Data
-                        </button>
-                        <button onclick="clearVisitorStats()" class="w-full p-4 bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white font-black uppercase text-xs rounded-2xl shadow-lg shadow-slate-200 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2">
-                            <i data-lucide="database" class="w-4 h-4"></i>
-                            Hapus Data Lokal
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Activity Log Table -->
-                <div class="bg-white rounded-3xl border border-slate-100 shadow-lg shadow-slate-100 overflow-hidden">
-                    <div class="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center text-sky-600">
-                                <i data-lucide="activity" class="w-5 h-5"></i>
-                            </div>
-                            <h3 class="text-lg font-black text-slate-800">Riwayat Aktivitas Pengunjung</h3>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/80">
-                                    <th class="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">No</th>
-                                    <th class="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Nama</th>
-                                    <th class="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">NIP</th>
-                                    <th class="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Role</th>
-                                    <th class="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Aktivitas</th>
-                                    <th class="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Halaman</th>
-                                    <th class="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">Waktu</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-logins-table-body">
-                                <!-- Data will be injected here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `,
     };
 
     const content = pageContents[pageId] || '<div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm"><h3 class="text-xl font-black mb-4">Halaman Tidak Ditemukan</h3><p class="text-slate-600">Konten untuk halaman ini belum tersedia.</p></div>';
@@ -740,195 +624,10 @@ function showPage(pageId) {
 
     if (window.innerWidth < 1024) toggleSidebar();
     if (pageId === 'mutasi-pm') initMutasiForm();
-    if (pageId === 'statistik-pengunjung') renderVisitorStats();
     initIcons();
 }
 
-async function renderVisitorStats() {
-    let visitorLogs = [];
-    let useLocalStorage = false;
 
-    // Try to get from Supabase first
-    if (!supa) initSupabaseClient();
-    if (supa) {
-        try {
-            const { data, error } = await supa
-                .from('visitor_logs')
-                .select('*')
-                .order('timestamp', { ascending: false })
-                .limit(50);
-            if (!error && data) {
-                visitorLogs = data;
-            } else {
-                useLocalStorage = true;
-            }
-        } catch (e) {
-            console.warn('Error fetching from Supabase, using local storage:', e);
-            useLocalStorage = true;
-        }
-    } else {
-        useLocalStorage = true;
-    }
-
-    // Fallback to local storage if needed
-    if (useLocalStorage) {
-        let stats;
-        try {
-            stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
-                totalVisits: 0,
-                roleVisits: {},
-                recentLogins: []
-            };
-        } catch (e) {
-            stats = {
-                totalVisits: 0,
-                roleVisits: {},
-                recentLogins: []
-            };
-        }
-        // Convert local stats to logs format
-        visitorLogs = stats.recentLogins.map(login => ({
-            nama: login.nama || login.role,
-            nip: login.nip || '-',
-            role: login.role,
-            activity_type: 'login',
-            page_name: null,
-            timestamp: login.time
-        }));
-    }
-
-    // Update Summary
-    const totalEl = document.getElementById('stat-total-visits');
-    const loginEl = document.getElementById('stat-admin-visits');
-    const pageVisitEl = document.getElementById('stat-user-visits');
-
-    if (totalEl) totalEl.innerText = visitorLogs.length;
-
-    if (loginEl) {
-        loginEl.innerText = visitorLogs.filter(log => log.activity_type === 'login').length;
-    }
-
-    if (pageVisitEl) {
-        pageVisitEl.innerText = visitorLogs.filter(log => log.activity_type === 'page_visit').length;
-    }
-
-    // Update Table
-    const tableBody = document.getElementById('recent-logins-table-body');
-    if (tableBody) {
-        if (visitorLogs.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-slate-400 font-medium">Belum ada data aktivitas.</td></tr>`;
-        } else {
-            tableBody.innerHTML = visitorLogs.map((log, index) => {
-                let activityLabel = log.activity_type === 'login' ? 'Login' : 'Kunjungi Halaman';
-                let activityColor = log.activity_type === 'login' ? 'text-emerald-700 bg-emerald-100 border-emerald-200' : 'text-sky-700 bg-sky-100 border-sky-200';
-                let pageDisplay = log.page_name ? log.page_name.replace(/[-_]/g, ' ').toUpperCase() : '-';
-                
-                let timeDisplay = '';
-                if (useLocalStorage) {
-                    timeDisplay = log.timestamp;
-                } else {
-                    // Format Supabase timestamp
-                    const date = new Date(log.timestamp);
-                    timeDisplay = date.toLocaleString('id-ID', {
-                        day: '2-digit', month: 'short', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    });
-                }
-
-                return `
-                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-all duration-200">
-                    <td class="px-6 py-5">
-                        <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center">
-                            <span class="text-sm font-black text-slate-600">${index + 1}</span>
-                        </div>
-                    </td>
-                    <td class="px-6 py-5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-gradient-to-br from-sky-100 to-indigo-100 rounded-xl flex items-center justify-center text-sky-700 font-black text-xs">
-                                ${log.nama ? log.nama.charAt(0).toUpperCase() : 'U'}
-                            </div>
-                            <div>
-                                <span class="text-sm font-black text-slate-800 block">${log.nama}</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-5 text-sm font-bold text-slate-600">${log.nip}</td>
-                    <td class="px-6 py-5">
-                        <span class="px-3 py-1 bg-slate-100 text-slate-700 text-[10px] font-black uppercase rounded-lg">${log.role}</span>
-                    </td>
-                    <td class="px-6 py-5">
-                        <span class="px-3 py-1.5 ${activityColor} border text-[10px] font-black uppercase rounded-xl">${activityLabel}</span>
-                    </td>
-                    <td class="px-6 py-5 text-sm font-bold text-slate-700">${pageDisplay}</td>
-                    <td class="px-6 py-5">
-                        <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
-                            <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
-                            ${timeDisplay}
-                        </div>
-                    </td>
-                </tr>
-            `}).join('');
-        }
-    }
-}
-
-function clearVisitorStats() {
-    if (confirm('Apakah Anda yakin ingin menghapus semua data statistik lokal?')) {
-        localStorage.removeItem('visitor_stats');
-        renderVisitorStats();
-        showToastGagah('Data statistik lokal telah dihapus.', 'trash-2', 'text-rose-500');
-    }
-}
-
-async function deleteVisitorLogsByDate() {
-    const dateStart = document.getElementById('delete-date-start').value;
-    const dateEnd = document.getElementById('delete-date-end').value;
-
-    if (!dateStart || !dateEnd) {
-        alert('Silakan pilih tanggal mulai dan tanggal akhir terlebih dahulu!');
-        return;
-    }
-
-    if (confirm(`Apakah Anda yakin ingin menghapus data dari ${dateStart} sampai ${dateEnd}?`)) {
-        try {
-            if (!supa) initSupabaseClient();
-            if (supa) {
-                // Hapus di Supabase
-                const { error } = await supa
-                    .from('visitor_logs')
-                    .delete()
-                    .gte('timestamp', `${dateStart}T00:00:00`)
-                    .lte('timestamp', `${dateEnd}T23:59:59`);
-
-                if (error) throw error;
-                showToastGagah('Data di Supabase berhasil dihapus!', 'check', 'text-emerald-500');
-            }
-            // Hapus di localStorage juga (untuk konsistensi)
-            let stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
-                totalVisits: 0,
-                roleVisits: {},
-                recentLogins: []
-            };
-            stats.recentLogins = stats.recentLogins.filter(login => {
-                // Parse login time and filter out
-                const loginDate = new Date(login.time);
-                const startDate = new Date(`${dateStart}T00:00:00`);
-                const endDate = new Date(`${dateEnd}T23:59:59`);
-                return loginDate < startDate || loginDate > endDate;
-            });
-            localStorage.setItem('visitor_stats', JSON.stringify(stats));
-            
-            // Refresh tampilan
-            renderVisitorStats();
-            // Kosongkan input tanggal
-            document.getElementById('delete-date-start').value = '';
-            document.getElementById('delete-date-end').value = '';
-        } catch (e) {
-            console.error('Error deleting visitor logs:', e);
-            showToastGagah('Gagal menghapus data!', 'alert-triangle', 'text-rose-500');
-        }
-    }
-}
 
 // Global state
 let currentUserRole = null;
@@ -963,8 +662,8 @@ function applyMenuPermissionsByData(userData) {
         // Normalisasi ID (Menghilangkan suffix jika ada)
         if (pageId.includes('restore-json')) pageId = 'restore-json';
         
-        // Pengecualian: Ganti Password, Dashboard, APBD, Form Informasi Sipandu, dan Statistik Pengunjung selalu aktif
-        if (pageId === 'ganti-password' || pageId === 'dashboard' || pageId === 'apbd' || pageId === 'form-informasi-sipandu' || pageId === 'statistik-pengunjung') return;
+        // Pengecualian: Ganti Password, Dashboard, APBD, dan Form Informasi Sipandu selalu aktif
+        if (pageId === 'ganti-password' || pageId === 'dashboard' || pageId === 'apbd' || pageId === 'form-informasi-sipandu') return;
 
         // Jika ID halaman TIDAK ada dalam daftar 'access' di database (tidak dicentang)
         // Atau jika user belum login (Guest)
@@ -1187,7 +886,6 @@ function handleLogin() {
                 localStorage.setItem('sipandu_loginTime', Date.now().toString());
                 localStorage.setItem('sipandu_userAccess', JSON.stringify(userAccessList));
 
-                trackVisitor(currentUserRole, username, fullName);
                 loginError.classList.add('hidden');
                 loginPage.classList.add('hidden');
                 mainAppContent.classList.remove('hidden');
@@ -1273,85 +971,7 @@ function initLoginLookup() {
     }
 }
 
-// Visitor Statistics Logic
-async function trackVisitor(role, nip, nama) {
-    // Local storage tracking (fallback)
-    let stats;
-    try {
-        stats = JSON.parse(localStorage.getItem('visitor_stats')) || {
-            totalVisits: 0,
-            roleVisits: {},
-            recentLogins: []
-        };
-    } catch (e) {
-        stats = {
-            totalVisits: 0,
-            roleVisits: {},
-            recentLogins: []
-        };
-    }
 
-    stats.totalVisits++;
-    stats.roleVisits[role] = (stats.roleVisits[role] || 0) + 1;
-
-    const now = new Date();
-    const loginTime = now.toLocaleString('id-ID', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    });
-
-    stats.recentLogins.unshift({
-        role: role,
-        nama: nama,
-        nip: nip,
-        time: loginTime
-    });
-
-    if (stats.recentLogins.length > 10) stats.recentLogins.pop();
-
-    localStorage.setItem('visitor_stats', JSON.stringify(stats));
-
-    // Supabase tracking
-    if (!supa) initSupabaseClient();
-    if (supa) {
-        try {
-            await supa.from('visitor_logs').insert({
-                nip: nip,
-                nama: nama,
-                role: role,
-                activity_type: 'login',
-                page_name: null
-            });
-        } catch (err) {
-            console.warn('Error saving login to Supabase:', err);
-        }
-    }
-}
-
-// Track page visits
-async function trackPageVisit(pageName) {
-    const nip = localStorage.getItem('sipandu_username');
-    const nama = localStorage.getItem('sipandu_userName');
-    const role = localStorage.getItem('sipandu_userRole');
-
-    if (!nip || !nama || !role) return;
-
-    // Supabase tracking
-    if (!supa) initSupabaseClient();
-    if (supa) {
-        try {
-            await supa.from('visitor_logs').insert({
-                nip: nip,
-                nama: nama,
-                role: role,
-                activity_type: 'page_visit',
-                page_name: pageName
-            });
-        } catch (err) {
-            console.warn('Error saving page visit to Supabase:', err);
-        }
-    }
-}
 
 function updateProfileUI(name, role) {
     const nameEl = document.getElementById('profile-name');
